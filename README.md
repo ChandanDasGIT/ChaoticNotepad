@@ -17,7 +17,8 @@ Make sure you have CMake, a C++20 compiler, and Qt 6 development packages instal
   cd ChaoticNotepad-v0.1-source
   sudo ./install.sh
 `
--or, use git clone:
+
+or, use git clone:
 
 `
 git clone https://github.com/ChandanDasGIT/ChaoticNotepad.git
@@ -25,5 +26,6 @@ cd ChaoticNotepad
 sudo ./install.sh
 `
 
--To uninstall :
+
+To uninstall :
 `sudo ./uninstall`
