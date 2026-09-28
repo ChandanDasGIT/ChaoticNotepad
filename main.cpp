@@ -11,9 +11,9 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    app.setOrganizationName("NotepadQtQuick");
-    app.setOrganizationDomain("notepadqtquick.org");
-    app.setApplicationName("NotepadQtQuick");
+    app.setOrganizationName("ChaoticNotepad");
+    app.setOrganizationDomain("ChaoticNotepad.org");
+    app.setApplicationName("ChaoticNotepad");
 
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/qt/qml/NotepadQtQuick/Main.qml"));

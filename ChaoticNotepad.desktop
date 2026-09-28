@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ChaoticNotepad
+Comment=Lightweight modern C++/QML code editor
+Exec=appNotepadQtQuick
+Icon=ChaoticNotepad
+Categories=Development;TextEditor;Utility;
+Terminal=false

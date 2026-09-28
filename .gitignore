@@ -1,7 +1,16 @@
-# Build output directories
-build/
+# Build output directories (handles build, build-release, Qt Creator kits)
+build*/
 bin/
 lib/
+AppDir/
+dist/
+
+# Release archives & packaged binaries
+*.tar.xz
+*.tar.gz
+*.tar.bz2
+*.zip
+*.AppImage
 
 # CMake artifacts & caches (recursive)
 CMakeCache.txt
@@ -38,3 +47,6 @@ ui_*.h
 *.swo
 *~
 .directory
+.vscode/
+.idea/
+.kateconfig
