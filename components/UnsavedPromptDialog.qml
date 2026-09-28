@@ -13,11 +13,17 @@ Popup {
     signal discardRequested()
     signal cancelRequested()
 
+    parent: Overlay.overlay
+    x: Math.round((parent.width - width) / 2)
+    y: Math.round((parent.height - height) / 2)
+    width: 360
+    z: 9999
+
     modal: true
     focus: true
-    anchors.centerIn: Overlay.overlay
     closePolicy: Popup.CloseOnEscape
-    width: 360
+
+    onOpened: saveBtn.forceActiveFocus()
 
     background: Rectangle {
         color: (root.appPalette && root.appPalette.popupBg) ? root.appPalette.popupBg : "#21252b"
@@ -28,6 +34,23 @@ Popup {
 
     contentItem: ColumnLayout {
         spacing: 16
+        focus: true
+
+        Keys.onPressed: function(event) {
+            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                root.saveRequested();
+                root.close();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Escape) {
+                root.cancelRequested();
+                root.close();
+                event.accepted = true;
+            } else if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_D) {
+                root.discardRequested();
+                root.close();
+                event.accepted = true;
+            }
+        }
 
         Label {
             text: root.docTitle !== "" ? ("Save \"" + root.docTitle + "\"?") : "Unsaved Changes"
@@ -66,8 +89,8 @@ Popup {
                     implicitHeight: 28
                     radius: 4
                     color: dontSaveBtn.down ? Qt.darker((root.appPalette ? root.appPalette.danger : "#e06c75"), 1.25)
-                         : (dontSaveBtn.hovered ? Qt.lighter((root.appPalette ? root.appPalette.danger : "#e06c75"), 1.1)
-                         : (root.appPalette ? root.appPalette.danger : "#e06c75"))
+                    : (dontSaveBtn.hovered ? Qt.lighter((root.appPalette ? root.appPalette.danger : "#e06c75"), 1.1)
+                    : (root.appPalette ? root.appPalette.danger : "#e06c75"))
                 }
                 onClicked: {
                     root.discardRequested();
@@ -75,7 +98,7 @@ Popup {
                 }
             }
 
-            // 2. Cancel (Dark / Black with border)
+            // 2. Cancel
             Button {
                 id: cancelBtn
                 contentItem: Text {
@@ -90,8 +113,8 @@ Popup {
                     implicitHeight: 28
                     radius: 4
                     color: cancelBtn.down ? "#111215"
-                         : (cancelBtn.hovered ? "#22252a"
-                         : "#16181d")
+                    : (cancelBtn.hovered ? "#22252a"
+                    : "#16181d")
                     border.color: (root.appPalette && root.appPalette.border) ? root.appPalette.border : "#30363d"
                     border.width: 1
                 }
@@ -117,8 +140,8 @@ Popup {
                     implicitHeight: 28
                     radius: 4
                     color: saveBtn.down ? Qt.darker((root.appPalette ? root.appPalette.highlight : "#528bff"), 1.25)
-                         : (saveBtn.hovered ? Qt.lighter((root.appPalette ? root.appPalette.highlight : "#528bff"), 1.1)
-                         : (root.appPalette ? root.appPalette.highlight : "#528bff"))
+                    : (saveBtn.hovered ? Qt.lighter((root.appPalette ? root.appPalette.highlight : "#528bff"), 1.1)
+                    : (root.appPalette ? root.appPalette.highlight : "#528bff"))
                 }
                 onClicked: {
                     root.saveRequested();

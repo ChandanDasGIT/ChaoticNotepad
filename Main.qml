@@ -11,9 +11,14 @@ ApplicationWindow {
     height: 700
     visible: true
     title: (tabs.currentTab ? tabs.currentTab.title : "unsaved")
-           + (tabs.currentTab && tabs.currentTab.isDirty ? " *" : "")
-           + " - Editor"
+    + (tabs.currentTab && tabs.currentTab.isDirty ? " *" : "")
+    + " - Editor"
     color: appPalette.editorBg
+
+    property bool isSyncingEditor: false
+    property bool isClosingWindow: false
+    property int tabPendingClose: -1
+    property string fileModifiedOnDisk: ""
 
     Settings {
         id: appSettings
@@ -23,7 +28,6 @@ ApplicationWindow {
         property alias fontFamily: settingsDialog.fontFamily
         property alias isDarkTheme: settingsDialog.isDarkTheme
         property alias restoreSession: settingsDialog.restoreSession
-        property bool isClosingWindow: false
         property var sessionFiles: []
     }
 
@@ -37,10 +41,6 @@ ApplicationWindow {
         appPalette: appPalette
     }
 
-    property bool isSyncingEditor: false
-    property int tabPendingClose: -1
-    property string fileModifiedOnDisk: ""
-
     function adjustZoom(delta) {
         settingsDialog.fontSize = Math.max(8, Math.min(36, settingsDialog.fontSize + delta));
     }
@@ -53,7 +53,7 @@ ApplicationWindow {
             appWindow.isSyncingEditor = true;
             codeEditor.text = textToSave;
             codeEditor.diskContent = textToSave;
-            appWindow.isSyncingEditor = false;
+            Qt.callLater(function() { appWindow.isSyncingEditor = false; });
 
             var slash = targetPath.lastIndexOf("/");
             var fileName = slash !== -1 ? targetPath.substring(slash + 1) : targetPath;
@@ -65,6 +65,19 @@ ApplicationWindow {
                 var target = tabPendingClose;
                 tabPendingClose = -1;
                 tabs.closeTab(target);
+
+                if (appWindow.isClosingWindow) {
+                    if (tabs.hasUnsavedChanges()) {
+                        for (var i = 0; i < tabs.model.count; ++i) {
+                            if (tabs.model.get(i).isDirty) {
+                                tabs.requestCloseTab(i);
+                                break;
+                            }
+                        }
+                    } else {
+                        Qt.quit();
+                    }
+                }
             }
             return true;
         }
@@ -91,11 +104,11 @@ ApplicationWindow {
         var fileName = slash !== -1 ? cleanPath.substring(slash + 1) : cleanPath;
         var fileText = FileIO.readFile(cleanPath);
 
-        if (tabs.currentTab && tabs.currentTab.content === "" && !tabs.currentTab.isDirty && tabs.currentTab.filePath === "") {
+        if (tabs.currentTab && tabs.currentTab.filePath === "" && !tabs.currentTab.isDirty && codeEditor.text === "") {
             appWindow.isSyncingEditor = true;
             codeEditor.text = fileText;
             codeEditor.diskContent = fileText;
-            appWindow.isSyncingEditor = false;
+            Qt.callLater(function() { appWindow.isSyncingEditor = false; });
             tabs.markSaved(cleanPath, fileName, fileText);
         } else {
             tabs.createTab(fileName, cleanPath, fileText);
@@ -157,8 +170,10 @@ ApplicationWindow {
         onEditorTextRequested: function(content) {
             appWindow.isSyncingEditor = true;
             codeEditor.text = content;
-            codeEditor.diskContent = (tabs.currentTab && tabs.currentTab.filePath !== "") ? tabs.currentTab.savedContent : "";
-            appWindow.isSyncingEditor = false;
+            codeEditor.diskContent = (tabs.currentTab && tabs.currentTab.filePath !== "") ? tabs.getCurrentSavedContent() : "";
+            Qt.callLater(function() {
+                appWindow.isSyncingEditor = false;
+            });
             codeEditor.textEdit.forceActiveFocus();
         }
         onCloseBlockedForUnsaved: function(index, title) {
@@ -168,8 +183,15 @@ ApplicationWindow {
             unsavedPrompt.open();
         }
     }
+
     onClosing: function(close) {
         saveSessionState();
+
+        if (unsavedPrompt.visible) {
+            close.accepted = false;
+            return;
+        }
+
         if (tabs.hasUnsavedChanges()) {
             close.accepted = false;
             appWindow.isClosingWindow = true;
@@ -286,7 +308,7 @@ ApplicationWindow {
                                 appWindow.isSyncingEditor = true;
                                 codeEditor.text = diskText;
                                 codeEditor.diskContent = diskText;
-                                appWindow.isSyncingEditor = false;
+                                Qt.callLater(function() { appWindow.isSyncingEditor = false; });
                                 tabs.markSaved(null, null, diskText);
                             }
                             reloadBanner.visible = false;
@@ -397,10 +419,8 @@ ApplicationWindow {
             tabs.closeTab(target);
             saveSessionState();
 
-            // Only quit if the user was actually trying to close the whole window!
             if (appWindow.isClosingWindow) {
                 if (tabs.hasUnsavedChanges()) {
-                    // Prompt for the next unsaved tab
                     for (var i = 0; i < tabs.model.count; ++i) {
                         if (tabs.model.get(i).isDirty) {
                             tabs.requestCloseTab(i);

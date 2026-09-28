@@ -10,9 +10,13 @@ Item {
     property int currentIndex: 0
     property alias model: tabListModel
 
+    // Internal text buffers separated from the UI ListModel
+    property var tabBuffers: []
+    property var tabSavedBuffers: []
+
     readonly property var currentTab: (tabListModel.count > 0 && currentIndex >= 0 && currentIndex < tabListModel.count)
-                                       ? tabListModel.get(currentIndex)
-                                       : null
+    ? tabListModel.get(currentIndex)
+    : null
 
     signal editorTextRequested(string content)
     signal closeBlockedForUnsaved(int index, string title)
@@ -22,15 +26,16 @@ Item {
     }
 
     function createTab(title, filePath, content) {
-        var t = (title !== undefined && title !== null) ? title : "untitled";
+        var t = (title !== undefined && title !== null && title !== "") ? title : "untitled";
         var fp = (filePath !== undefined && filePath !== null) ? filePath : "";
         var c = (content !== undefined && content !== null) ? content : "";
+
+        tabBuffers.push(c);
+        tabSavedBuffers.push(c);
 
         tabListModel.append({
             title: t,
             filePath: fp,
-            savedContent: c,
-            content: c,
             isDirty: false
         });
 
@@ -43,13 +48,14 @@ Item {
     function selectTab(newIndex, currentEditorText) {
         if (newIndex < 0 || newIndex >= tabListModel.count || newIndex === currentIndex) return;
 
-        if (currentTab) {
-            currentTab.content = currentEditorText;
+        // Save current active tab text to memory buffer before switching
+        if (currentIndex >= 0 && currentIndex < tabBuffers.length && currentEditorText !== undefined && currentEditorText !== null) {
+            tabBuffers[currentIndex] = currentEditorText;
         }
 
         currentIndex = newIndex;
-        var nextTab = tabListModel.get(newIndex);
-        tabController.editorTextRequested(nextTab.content);
+        var targetContent = (newIndex < tabBuffers.length) ? tabBuffers[newIndex] : "";
+        tabController.editorTextRequested(targetContent);
     }
 
     function requestCloseTab(index) {
@@ -70,6 +76,9 @@ Item {
             FileIO.unwatchFile(tab.filePath);
         }
 
+        tabBuffers.splice(index, 1);
+        tabSavedBuffers.splice(index, 1);
+
         var wasCurrent = (index === currentIndex);
         tabListModel.remove(index);
 
@@ -81,26 +90,30 @@ Item {
         if (wasCurrent) {
             var nextIndex = Math.min(index, tabListModel.count - 1);
             currentIndex = nextIndex;
-            var targetTab = tabListModel.get(nextIndex);
-            tabController.editorTextRequested(targetTab.content);
+            var contentToLoad = (nextIndex < tabBuffers.length) ? tabBuffers[nextIndex] : "";
+            tabController.editorTextRequested(contentToLoad);
         } else if (index < currentIndex) {
             currentIndex--;
         }
     }
 
     function markSaved(filePath, fileName, content) {
-        if (!currentTab) return;
-        if (filePath !== null && filePath !== undefined) currentTab.filePath = filePath;
-        if (fileName !== null && fileName !== undefined) currentTab.title = fileName;
-        currentTab.savedContent = content;
-        currentTab.content = content;
-        currentTab.isDirty = false;
+        if (currentIndex < 0 || currentIndex >= tabListModel.count) return;
+        if (filePath !== null && filePath !== undefined) tabListModel.setProperty(currentIndex, "filePath", filePath);
+        if (fileName !== null && fileName !== undefined) tabListModel.setProperty(currentIndex, "title", fileName);
+        tabSavedBuffers[currentIndex] = content;
+        tabBuffers[currentIndex] = content;
+        tabListModel.setProperty(currentIndex, "isDirty", false);
     }
 
     function markCurrentDirty(editorText) {
-        if (!currentTab) return;
-        currentTab.content = editorText;
-        currentTab.isDirty = (currentTab.savedContent !== editorText);
+        if (currentIndex < 0 || currentIndex >= tabListModel.count) return;
+        tabBuffers[currentIndex] = editorText;
+        var saved = (currentIndex < tabSavedBuffers.length) ? tabSavedBuffers[currentIndex] : "";
+        var dirty = (saved !== editorText);
+        if (tabListModel.get(currentIndex).isDirty !== dirty) {
+            tabListModel.setProperty(currentIndex, "isDirty", dirty);
+        }
     }
 
     function hasUnsavedChanges() {
@@ -108,6 +121,13 @@ Item {
             if (tabListModel.get(i).isDirty) return true;
         }
         return false;
+    }
+
+    function getCurrentSavedContent() {
+        if (currentIndex >= 0 && currentIndex < tabSavedBuffers.length) {
+            return tabSavedBuffers[currentIndex];
+        }
+        return "";
     }
 
     Component.onCompleted: {
