@@ -216,6 +216,7 @@ ApplicationWindow {
                 appPalette: appPalette
                 editorFontSize: settingsDialog.fontSize
                 editorFontFamily: settingsDialog.fontFamily
+                currentFilePath: tabs.currentTab ? tabs.currentTab.filePath : ""
                 onTextModified: {
                     if (!appWindow.isSyncingEditor) {
                         tabs.markCurrentDirty(codeEditor.text);

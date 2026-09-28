@@ -14,6 +14,7 @@ Flickable {
     property int editorFontSize: 13
     property string editorFontFamily: "Monospace"
     property string diskContent: ""
+    property string currentFilePath: ""
 
     signal textModified()
     signal zoomRequested(int delta)
@@ -26,6 +27,28 @@ Flickable {
         highlightedWord: editor.selectedText
         cursorPosition: editor.cursorPosition
     }
+
+    function updateHighlighter() {
+            if (!editor.textDocument) return;
+
+            var path = currentFilePath.toLowerCase();
+            var isSupported = path.endsWith(".cpp") ||
+                              path.endsWith(".h")   ||
+                              path.endsWith(".hpp") ||
+                              path.endsWith(".qml") ||
+                              path.endsWith(".cc")  ||
+                              path.endsWith(".cxx");
+
+            if (isSupported) {
+                highlighter.setDocument(editor.textDocument);
+                highlighter.cursorPosition = editor.cursorPosition;
+            } else {
+                highlighter.clearBracketMatches();
+                highlighter.setDocument(null); // Detach cleanly for .txt, .md, untitled
+            }
+        }
+
+        onCurrentFilePathChanged: updateHighlighter()
 
     ScrollBar.vertical: ScrollBar {
         parent: editorFlickable
@@ -299,8 +322,8 @@ Flickable {
                 property bool isHandlingSpecialKey: false
 
                 Component.onCompleted: {
-                    highlighter.setDocument(editor.textDocument);
-                }
+                        editorFlickable.updateHighlighter();
+                    }
 
                 cursorDelegate: Rectangle {
                     id: cursorRect

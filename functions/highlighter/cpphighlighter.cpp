@@ -130,6 +130,8 @@ void CppHighlighter::setDocument(QQuickTextDocument *quickDocument)
 {
     if (quickDocument) {
         QSyntaxHighlighter::setDocument(quickDocument->textDocument());
+    } else {
+        QSyntaxHighlighter::setDocument(nullptr);
     }
 }
 
