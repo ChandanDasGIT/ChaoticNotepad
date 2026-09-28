@@ -1,7 +1,8 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQmlEngine>
-#include <QJSEngine>
+#include <QQmlContext>
+#include <QCommandLineParser>
+#include <QFileInfo>
 #include <QIcon>
 #include "fileio.h"
 #include "functions/highlighter/cpphighlighter.h"
@@ -15,15 +16,35 @@ int main(int argc, char *argv[])
     app.setOrganizationDomain("ChaoticNotepad.org");
     app.setApplicationName("ChaoticNotepad");
 
-    QQmlApplicationEngine engine;
-    const QUrl url(QStringLiteral("qrc:/qt/qml/NotepadQtQuick/Main.qml"));
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [url](QObject *obj, const QUrl &objUrl) {
-                         if (!obj && url == objUrl)
-                             QCoreApplication::exit(-1);
-                     }, Qt::QueuedConnection);
+    // 1. Parse command line arguments
+    QCommandLineParser parser;
+    parser.setApplicationDescription("ChaoticNotepad Text Editor");
+    parser.addHelpOption();
+    parser.addVersionOption();
+    parser.addPositionalArgument("file", "File to open");
+    parser.process(app);
 
-    engine.load(url);
+    // 2. Extract initial file path if provided
+    QString initialFilePath = "";
+    const QStringList posArgs = parser.positionalArguments();
+    if (!posArgs.isEmpty()) {
+        QFileInfo fileInfo(posArgs.first());
+        if (fileInfo.exists()) {
+            initialFilePath = fileInfo.absoluteFilePath();
+        }
+    }
+
+    QQmlApplicationEngine engine;
+
+    // 3. Expose the file path directly to the QML root context
+    engine.rootContext()->setContextProperty("initialFileToOpen", initialFilePath);
+
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
+                     &app, []() { QCoreApplication::exit(-1); },
+                     Qt::QueuedConnection);
+
+    // 4. Load the module using the standard 2-argument overload
+    engine.loadFromModule("NotepadQtQuick", "Main");
 
     return app.exec();
 }

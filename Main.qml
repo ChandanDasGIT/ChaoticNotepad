@@ -184,6 +184,10 @@ ApplicationWindow {
 
     Component.onCompleted: {
         restoreSessionIfEnabled();
+
+        if (typeof initialFileToOpen !== "undefined" && initialFileToOpen !== "") {
+            appWindow.openFilePath(initialFileToOpen);
+        }
     }
 
     ColumnLayout {

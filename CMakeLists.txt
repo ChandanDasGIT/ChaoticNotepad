@@ -13,6 +13,11 @@ qt_add_executable(appNotepadQtQuick
     main.cpp
 )
 
+# Output the compiled binary file as 'ChaoticNotepad' instead of 'appNotepadQtQuick'
+set_target_properties(appNotepadQtQuick PROPERTIES
+    OUTPUT_NAME "ChaoticNotepad"
+)
+
 qt_add_qml_module(appNotepadQtQuick
     URI NotepadQtQuick
     VERSION 1.0
@@ -47,7 +52,7 @@ target_link_libraries(appNotepadQtQuick PRIVATE
     Qt6::QuickControls2
 )
 
-# Installation targets for packaging (AppImage & desktop integration)
+# Installation targets for packaging & desktop integration
 include(GNUInstallDirs)
 
 install(TARGETS appNotepadQtQuick
