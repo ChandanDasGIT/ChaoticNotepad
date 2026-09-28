@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtCore
 import NotepadQtQuick
-import "components/."
+import "components"
 
 ApplicationWindow {
     id: appWindow
@@ -23,6 +23,7 @@ ApplicationWindow {
         property alias fontFamily: settingsDialog.fontFamily
         property alias isDarkTheme: settingsDialog.isDarkTheme
         property alias restoreSession: settingsDialog.restoreSession
+        property bool isClosingWindow: false
         property var sessionFiles: []
     }
 
@@ -171,6 +172,7 @@ ApplicationWindow {
         saveSessionState();
         if (tabs.hasUnsavedChanges()) {
             close.accepted = false;
+            appWindow.isClosingWindow = true;
             for (var i = 0; i < tabs.model.count; ++i) {
                 if (tabs.model.get(i).isDirty) {
                     tabs.requestCloseTab(i);
@@ -384,14 +386,29 @@ ApplicationWindow {
     UnsavedPromptDialog {
         id: unsavedPrompt
         appPalette: appPalette
-        onCancelRequested: tabPendingClose = -1
+        onCancelRequested: {
+            tabPendingClose = -1;
+            appWindow.isClosingWindow = false;
+        }
         onDiscardRequested: {
             var target = tabPendingClose;
             tabPendingClose = -1;
             tabs.closeTab(target);
             saveSessionState();
-            if (!tabs.hasUnsavedChanges()) {
-                Qt.quit(); // Close if we were exiting the window
+
+            // Only quit if the user was actually trying to close the whole window!
+            if (appWindow.isClosingWindow) {
+                if (tabs.hasUnsavedChanges()) {
+                    // Prompt for the next unsaved tab
+                    for (var i = 0; i < tabs.model.count; ++i) {
+                        if (tabs.model.get(i).isDirty) {
+                            tabs.requestCloseTab(i);
+                            break;
+                        }
+                    }
+                } else {
+                    Qt.quit();
+                }
             }
         }
         onSaveRequested: {

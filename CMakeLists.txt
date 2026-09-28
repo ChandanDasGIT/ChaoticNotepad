@@ -33,6 +33,9 @@ qt_add_qml_module(appNotepadQtQuick
         components/FindReplaceBar.qml
         components/TabController.qml
         components/SettingsDialog.qml
+        components/Minimap.qml
+        components/editorComponents/EditorLineGutter.qml
+        components/editorComponents/EditorKeyHandler.qml
     SOURCES
         fileio.h
         functions/textsercher/textsearcher.h
@@ -72,3 +75,4 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ChaoticNotepad.png")
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
     )
 endif()
+

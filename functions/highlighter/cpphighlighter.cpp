@@ -1,5 +1,6 @@
 #include "cpphighlighter.h"
 #include <QTextDocument>
+#include <QTextBlock>
 
 CppHighlighter::CppHighlighter(QObject *parent)
 : QSyntaxHighlighter(parent)
@@ -165,9 +166,22 @@ void CppHighlighter::setCursorPosition(int pos)
 
 void CppHighlighter::clearBracketMatches()
 {
+    int oldPos1 = m_matchedBracket1;
+    int oldPos2 = m_matchedBracket2;
+
     m_matchedBracket1 = -1;
     m_matchedBracket2 = -1;
-    rehighlight();
+
+    if (!document()) return;
+
+    if (oldPos1 >= 0) {
+        QTextBlock b = document()->findBlock(oldPos1);
+        if (b.isValid()) rehighlightBlock(b);
+    }
+    if (oldPos2 >= 0) {
+        QTextBlock b = document()->findBlock(oldPos2);
+        if (b.isValid()) rehighlightBlock(b);
+    }
 }
 
 int CppHighlighter::findMatchingBracket(const QString &docText, int index, QChar openChar, QChar closeChar, bool forward)
@@ -193,17 +207,33 @@ int CppHighlighter::findMatchingBracket(const QString &docText, int index, QChar
 
 void CppHighlighter::updateBracketMatching()
 {
+    // Save previous matched bracket positions so we can clear their highlights
+    int oldPos1 = m_matchedBracket1;
+    int oldPos2 = m_matchedBracket2;
+
     m_matchedBracket1 = -1;
     m_matchedBracket2 = -1;
 
+    auto refreshBlocks = [this](int pos1, int pos2) {
+        if (!document()) return;
+        if (pos1 >= 0) {
+            QTextBlock b = document()->findBlock(pos1);
+            if (b.isValid()) rehighlightBlock(b);
+        }
+        if (pos2 >= 0) {
+            QTextBlock b = document()->findBlock(pos2);
+            if (b.isValid()) rehighlightBlock(b);
+        }
+    };
+
     if (!document()) {
-        rehighlight();
+        refreshBlocks(oldPos1, oldPos2);
         return;
     }
 
     QString docText = document()->toPlainText();
     if (docText.isEmpty()) {
-        rehighlight();
+        refreshBlocks(oldPos1, oldPos2);
         return;
     }
 
@@ -240,9 +270,12 @@ void CppHighlighter::updateBracketMatching()
         }
     }
 
-    rehighlight();
+    // Only repaint if the matched positions actually changed
+    if (oldPos1 != m_matchedBracket1 || oldPos2 != m_matchedBracket2) {
+        refreshBlocks(oldPos1, oldPos2);
+        refreshBlocks(m_matchedBracket1, m_matchedBracket2);
+    }
 }
-
 void CppHighlighter::highlightBlock(const QString &text)
 {
     // Apply normal syntax coloring rules
