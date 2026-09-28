@@ -207,6 +207,7 @@ int CppHighlighter::findMatchingBracket(const QString &docText, int index, QChar
 
 void CppHighlighter::updateBracketMatching()
 {
+    return;
     // Save previous matched bracket positions so we can clear their highlights
     int oldPos1 = m_matchedBracket1;
     int oldPos2 = m_matchedBracket2;

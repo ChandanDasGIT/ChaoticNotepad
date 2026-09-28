@@ -215,6 +215,7 @@ ApplicationWindow {
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            clip: true
 
             CodeEditor {
                 id: codeEditor

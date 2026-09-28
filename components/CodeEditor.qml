@@ -37,7 +37,7 @@ Item {
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: minimap.left
-        clip: true
+        clip: false
         pixelAligned: true
         boundsBehavior: Flickable.StopAtBounds
 
@@ -65,7 +65,13 @@ Item {
             target: editor
             function onSelectionStartChanged() { selectionTimer.restart(); }
             function onSelectionEndChanged()   { selectionTimer.restart(); }
-            function onCursorPositionChanged() { selectionTimer.restart(); }
+            function onCursorPositionChanged() {
+                selectionTimer.restart();
+                editor.cursorVisible = false;
+                Qt.callLater(function() {
+                    editor.cursorVisible = true;
+                });
+            }
         }
 
         CppHighlighter {
@@ -85,6 +91,7 @@ Item {
                               path.endsWith(".cxx")  ||
                               path.endsWith(".lua")  ||
                               path.endsWith(".js")   ||
+                              path.endsWith(".fish")   ||
                               path.endsWith(".mjs");
 
             if (isSupported) {
@@ -154,7 +161,7 @@ Item {
                     selectByMouse: true
                     focus: true
                     activeFocusOnTab: true
-                    cursorVisible: activeFocus
+                  //  cursorVisible: activeFocus
                     wrapMode: TextEdit.WrapAnywhere
                     selectionColor: root.appPalette.textSelectionBg
                     selectedTextColor: root.appPalette.textSelectedColor
@@ -196,17 +203,17 @@ Item {
                         }
                     }
 
-                    onCursorRectangleChanged: {
-                        var curY = cursorRectangle.y;
-                        var curH = cursorRectangle.height > 0 ? cursorRectangle.height : font.pixelSize + 4;
-                        var maxY = Math.max(0, editorFlickable.contentHeight - editorFlickable.height);
-
-                        if (curY + curH > editorFlickable.contentY + editorFlickable.height - 30) {
-                            editorFlickable.contentY = Math.min(maxY, (curY + curH) - editorFlickable.height + 30);
-                        } else if (curY < editorFlickable.contentY + 10) {
-                            editorFlickable.contentY = Math.max(0, curY - 10);
-                        }
-                    }
+                    // onCursorRectangleChanged: {
+                    //     var curY = cursorRectangle.y;
+                    //     var curH = cursorRectangle.height > 0 ? cursorRectangle.height : font.pixelSize + 4;
+                    //     var maxY = Math.max(0, editorFlickable.contentHeight - editorFlickable.height);
+                    //
+                    //     if (curY + curH > editorFlickable.contentY + editorFlickable.height - 30) {
+                    //         editorFlickable.contentY = Math.min(maxY, (curY + curH) - editorFlickable.height + 30);
+                    //     } else if (curY < editorFlickable.contentY + 10) {
+                    //         editorFlickable.contentY = Math.max(0, curY - 10);
+                    //     }
+                    // }
                 }
             }
         }

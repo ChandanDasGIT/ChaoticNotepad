@@ -17,6 +17,12 @@ Rectangle {
     property int layoutVersion: 0
     property var foldStorage: ({})
 
+    FontMetrics {
+        id: fontMetrics
+        font.family: root.editorFontFamily
+        font.pixelSize: root.editorFontSize
+    }
+
     function recomputeGutter() {
         if (!editor) return;
 
@@ -156,7 +162,7 @@ Rectangle {
 
             Item {
                 width: root.width
-                height: root.editor.cursorRectangle.height
+                height: fontMetrics.height
                 y: root.layoutVersion >= 0 ? root.editor.positionToRectangle(modelData.offset).y : 0
 
                 Rectangle {
