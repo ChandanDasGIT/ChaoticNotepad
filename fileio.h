@@ -6,7 +6,7 @@
 #include <QTextStream>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
-#include <QSet>
+#include <QHash>
 #include <QtQml/qqmlregistration.h>
 
 class FileIO : public QObject
@@ -17,7 +17,7 @@ class FileIO : public QObject
 
 public:
     explicit FileIO(QObject *parent = nullptr)
-        : QObject(parent), m_watcher(new QFileSystemWatcher(this))
+    : QObject(parent), m_watcher(new QFileSystemWatcher(this))
     {
         connect(m_watcher, &QFileSystemWatcher::fileChanged, this, &FileIO::onFileChanged);
     }
@@ -43,23 +43,22 @@ public:
     Q_INVOKABLE bool writeFile(const QString &filePath, const QString &content) {
         if (filePath.isEmpty()) return false;
 
-        // Temporarily pause watcher to prevent our own write from triggering reload prompts
-        m_suppressedFiles.insert(filePath);
-
         QFile file(filePath);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            m_suppressedFiles.remove(filePath);
             return false;
         }
 
         QTextStream out(&file);
         out << content;
+        out.flush();
         file.close();
+
+        // Remember what we wrote so the watcher can recognise its own save
+        m_lastWritten.insert(filePath, content);
 
         // Ensure this file continues to be tracked
         watchFileInternal(filePath);
 
-        m_suppressedFiles.remove(filePath);
         return true;
     }
 
@@ -68,6 +67,7 @@ public:
         if (m_watcher->files().contains(filePath)) {
             m_watcher->removePath(filePath);
         }
+        m_lastWritten.remove(filePath);
     }
 
 signals:
@@ -75,11 +75,19 @@ signals:
 
 private slots:
     void onFileChanged(const QString &path) {
-        if (m_suppressedFiles.contains(path)) return;
-
         // Some editors save via temporary file swap; re-attach watcher if needed
         if (QFile::exists(path) && !m_watcher->files().contains(path)) {
             m_watcher->addPath(path);
+        }
+
+        // Ignore the change event caused by our own writeFile()
+        auto it = m_lastWritten.constFind(path);
+        if (it != m_lastWritten.constEnd()) {
+            QFile f(path);
+            if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&f);
+                if (in.readAll() == it.value()) return;
+            }
         }
 
         emit externalFileModified(path);
@@ -94,5 +102,5 @@ private:
     }
 
     QFileSystemWatcher *m_watcher;
-    QSet<QString> m_suppressedFiles;
+    QHash<QString, QString> m_lastWritten;
 };

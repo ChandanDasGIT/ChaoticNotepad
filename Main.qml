@@ -46,12 +46,18 @@ ApplicationWindow {
     }
 
     function performSave(targetPath, shouldCloseAfter) {
-        var raw = codeEditor.text;
+        var raw = codeEditor.realText();
         var textToSave = (!raw || raw.length === 0) ? "" : (raw.endsWith("\n") ? raw : raw + "\n");
 
         if (FileIO.writeFile(targetPath, textToSave)) {
             appWindow.isSyncingEditor = true;
-            codeEditor.text = textToSave;
+            if (codeEditor.realText() !== textToSave) {
+                // Only the trailing newline differs: append it instead of replacing
+                // the whole text, so the undo history survives
+                var savedCursor = codeEditor.textEdit.cursorPosition;
+                codeEditor.textEdit.insert(codeEditor.textEdit.length, "\n");
+                codeEditor.textEdit.cursorPosition = savedCursor;
+            }
             codeEditor.diskContent = textToSave;
             Qt.callLater(function() { appWindow.isSyncingEditor = false; });
 
@@ -109,7 +115,8 @@ ApplicationWindow {
             codeEditor.text = fileText;
             codeEditor.diskContent = fileText;
             Qt.callLater(function() { appWindow.isSyncingEditor = false; });
-            tabs.markSaved(cleanPath, fileName, fileText);
+            codeEditor.originalContent = fileText;
+            tabs.markSaved(cleanPath, fileName, fileText, true);
         } else {
             tabs.createTab(fileName, cleanPath, fileText);
             codeEditor.diskContent = fileText;
@@ -171,10 +178,17 @@ ApplicationWindow {
             appWindow.isSyncingEditor = true;
             codeEditor.text = content;
             codeEditor.diskContent = (tabs.currentTab && tabs.currentTab.filePath !== "") ? tabs.getCurrentSavedContent() : "";
+
+            codeEditor.originalContent = tabs.getCurrentOriginalContent();
+
             Qt.callLater(function() {
                 appWindow.isSyncingEditor = false;
             });
             codeEditor.textEdit.forceActiveFocus();
+        }
+                onAboutToSwitch: {
+            appWindow.isSyncingEditor = true;
+            tabs.stashCurrentText(codeEditor.realText());
         }
         onCloseBlockedForUnsaved: function(index, title) {
             appWindow.tabPendingClose = index;
@@ -225,7 +239,7 @@ ApplicationWindow {
             currentTabIndex: tabs.currentIndex
             onTabSelected: function(index) {
                 reloadBanner.visible = false;
-                tabs.selectTab(index, codeEditor.text);
+                tabs.selectTab(index, codeEditor.realText());
             }
             onCloseRequested: function(index) {
                 tabs.requestCloseTab(index);
@@ -248,7 +262,7 @@ ApplicationWindow {
                 currentFilePath: tabs.currentTab ? tabs.currentTab.filePath : ""
                 onTextModified: {
                     if (!appWindow.isSyncingEditor) {
-                        tabs.markCurrentDirty(codeEditor.text);
+                        tabs.markCurrentDirty(codeEditor.realText());
                         if (findBar.visible && !findBar.activeFocus) {
                             findBar.updateSearch();
                         }
@@ -309,7 +323,8 @@ ApplicationWindow {
                                 codeEditor.text = diskText;
                                 codeEditor.diskContent = diskText;
                                 Qt.callLater(function() { appWindow.isSyncingEditor = false; });
-                                tabs.markSaved(null, null, diskText);
+                                codeEditor.originalContent = diskText;
+                                tabs.markSaved(null, null, diskText, true);
                             }
                             reloadBanner.visible = false;
                         }

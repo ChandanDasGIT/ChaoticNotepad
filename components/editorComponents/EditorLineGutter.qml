@@ -1,4 +1,5 @@
 import QtQuick
+import NotepadQtQuick
 
 Rectangle {
     id: root
@@ -6,6 +7,8 @@ Rectangle {
     required property QtObject appPalette
     required property var editor
     property string diskContent: ""
+    property string originalContent: ""
+
     property string editorFontFamily: "Monospace"
     property int editorFontSize: 13
 
@@ -16,6 +19,7 @@ Rectangle {
     property var gutterData: []
     property int layoutVersion: 0
     property var foldStorage: ({})
+    property int nextFoldId: 1
 
     FontMetrics {
         id: fontMetrics
@@ -23,12 +27,44 @@ Rectangle {
         font.pixelSize: root.editorFontSize
     }
 
+    LineDiffer { id: differ }
+
+    function realText() {
+        var lines = editor.text.split("\n");
+        var re = /(\{|\(|\[)\s*\/\*folded:\d+(?::(\d+))?\*\/\s*\.\.\.\s*(\}|\)|\])/;
+        for (var i = 0; i < lines.length; i++) {
+            var fm = lines[i].match(re);
+            if (!fm || fm[2] === undefined) continue;
+            var st = foldStorage[fm[2]];
+            if (st !== undefined)
+                lines[i] = lines[i].replace(re, function() { return st; });
+        }
+        return lines.join("\n");
+    }
+
     function recomputeGutter() {
         if (!editor) return;
 
         var fullText = editor.text;
         var lines = fullText.split("\n");
-        var diskLines = root.diskContent.split("\n");
+        var expanded = [];
+        var expStart = [];
+        var expCount = [];
+        var foldRe = /(\{|\(|\[)\s*\/\*folded:\d+(?::(\d+))?\*\/\s*\.\.\.\s*(\}|\)|\])/;
+        for (var e = 0; e < lines.length; e++) {
+            expStart.push(expanded.length);
+            var fm = lines[e].match(foldRe);
+            var st = (fm && fm[2] !== undefined) ? foldStorage[fm[2]] : undefined;
+            var chunk = (st !== undefined)
+            ? lines[e].replace(foldRe, function() { return st; })
+            : lines[e];
+            var parts = chunk.split("\n");
+            for (var q = 0; q < parts.length; q++) expanded.push(parts[q]);
+            expCount.push(parts.length);
+        }
+        var expandedText = expanded.join("\n");
+        var unsavedStates = differ.diff(root.diskContent, expandedText);
+        var savedStates = differ.diff(root.originalContent, expandedText);
 
         var offsets = [];
         var pos = 0;
@@ -42,7 +78,7 @@ Rectangle {
 
         for (var lineIdx = 0; lineIdx < lines.length; lineIdx++) {
             var lineStr = lines[lineIdx];
-            var foldMatch = lineStr.match(/(\{|\(|\[)\s*\/\*folded:(\d+)\*\/\s*\.\.\.\s*(\}|\)|\])/);
+            var foldMatch = lineStr.match(/(\{|\(|\[)\s*\/\*folded:(\d+)(?::\d+)?\*\/\s*\.\.\.\s*(\}|\)|\])/);
             var isFolded = foldMatch !== null;
             var hasFoldTarget = /[\{\(\[]/.test(lineStr);
 
@@ -75,12 +111,9 @@ Rectangle {
             }
 
             var modState = 0;
-            if (lineIdx < diskLines.length) {
-                if (lines[lineIdx] !== diskLines[lineIdx]) {
-                    modState = 1;
-                }
-            } else {
-                modState = 1;
+            for (var m = expStart[lineIdx]; m < expStart[lineIdx] + expCount[lineIdx]; m++) {
+                if (unsavedStates[m] > 0) { modState = 1; break; }
+                if (savedStates[m] > 0) modState = 2;
             }
 
             var actualLineNumber = lineIdx + 1 + accumulatedHiddenLines;
@@ -106,13 +139,14 @@ Rectangle {
 
     function toggleFold(item) {
         var lines = editor.text.split("\n");
+        var foldRe = /(\{|\(|\[)\s*\/\*folded:\d+(?::(\d+))?\*\/\s*\.\.\.\s*(\}|\)|\])/;
         if (item.isFolded) {
             var foldedLine = lines[item.startLine];
-            var stored = foldStorage[item.startLine];
+            var fm = foldedLine.match(foldRe);
+            var stored = (fm && fm[2] !== undefined) ? foldStorage[fm[2]] : undefined;
             if (stored !== undefined) {
-                var restored = foldedLine.replace(/(\{|\(|\[)\s*\/\*folded:\d+\*\/\s*\.\.\.\s*(\}|\)|\])/, stored);
-                lines[item.startLine] = restored;
-                delete foldStorage[item.startLine];
+                lines[item.startLine] = foldedLine.replace(foldRe, function() { return stored; });
+                delete foldStorage[fm[2]];
                 editor.text = lines.join("\n");
             }
         } else {
@@ -131,9 +165,11 @@ Rectangle {
 
             var hiddenLinesCount = item.endLine - item.startLine;
             var hiddenSlice = blockText.substring(firstBraceIdx, lastBraceIdx + 1);
-            foldStorage[item.startLine] = hiddenSlice;
+            var foldId = nextFoldId++;
+            foldStorage[foldId] = hiddenSlice;
 
-            var collapsedBlock = blockText.substring(0, firstBraceIdx) + openCh + " /*folded:" + hiddenLinesCount + "*/ ... " + closeCh;
+            var tail = blockText.substring(lastBraceIdx + 1);
+            var collapsedBlock = blockText.substring(0, firstBraceIdx) + openCh + " /*folded:" + hiddenLinesCount + ":" + foldId + "*/ ... " + closeCh + tail;
             lines.splice(item.startLine, (item.endLine - item.startLine + 1), collapsedBlock);
             editor.text = lines.join("\n");
         }
@@ -152,6 +188,7 @@ Rectangle {
     }
 
     onDiskContentChanged: gutterTimer.restart()
+    onOriginalContentChanged: gutterTimer.restart()
     Component.onCompleted: recomputeGutter()
 
     Item {

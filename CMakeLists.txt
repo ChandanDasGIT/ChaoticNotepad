@@ -42,12 +42,15 @@ qt_add_qml_module(appNotepadQtQuick
         functions/textsercher/textsearcher.cpp
         functions/highlighter/cpphighlighter.h
         functions/highlighter/cpphighlighter.cpp
+        functions/linediff/linediffer.h
+        functions/linediff/linediffer.cpp
 )
 
 target_include_directories(appNotepadQtQuick PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/functions/textsercher
     ${CMAKE_CURRENT_SOURCE_DIR}/functions/highlighter
+    ${CMAKE_CURRENT_SOURCE_DIR}/functions/linediff
 )
 
 target_link_libraries(appNotepadQtQuick PRIVATE

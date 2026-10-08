@@ -65,10 +65,10 @@ CppHighlighter::CppHighlighter(QObject *parent)
     rule.format = scopeFormat;
     m_highlightingRules.append(rule);
 
-    // 5. Class / Type Names (PascalCase or Q* types)
-    m_classFormat.setFontWeight(QFont::Bold);
-    m_classFormat.setForeground(QColor("#e5c07b")); // Golden Yellow
-    rule.pattern = QRegularExpression(QStringLiteral("\\bQ[A-Za-z0-9_]+\\b|\\b[A-Z][A-Za-z0-9_]*\\b"));
+    // 5. Class / Type Names (anything starting with a capital letter)
+    // Same green as strings / include paths, no bold.
+    m_classFormat.setForeground(QColor("#98c379"));
+    rule.pattern = QRegularExpression(QStringLiteral("\\b[A-Z][A-Za-z0-9_]*\\b"));
     rule.format = m_classFormat;
     m_highlightingRules.append(rule);
 
@@ -113,18 +113,15 @@ CppHighlighter::CppHighlighter(QObject *parent)
     rule.format = m_quotationFormat;
     m_highlightingRules.append(rule);
 
-    // 12. Single-line comments
+    // Comment formats. Comments are NOT regex rules: they are found by a small
+    // scanner in applyCommentFormats() that runs after all the rules above,
+    // so they always override them (and ignore comment tokens inside strings).
     m_singleLineCommentFormat.setForeground(QColor("#5c6370")); // Muted Gray
     m_singleLineCommentFormat.setFontItalic(true);
-    rule.pattern = QRegularExpression(QStringLiteral("//[^\n]*"));
-    rule.format = m_singleLineCommentFormat;
-    m_highlightingRules.append(rule);
-
-    // Multi-line comments
     m_multiLineCommentFormat.setForeground(QColor("#5c6370"));
     m_multiLineCommentFormat.setFontItalic(true);
-    m_commentStartPattern = QRegularExpression(QStringLiteral("/\\*"));
-    m_commentEndPattern = QRegularExpression(QStringLiteral("\\*/"));
+
+    applyLanguage();
 }
 
 void CppHighlighter::setDocument(QQuickTextDocument *quickDocument)
@@ -133,6 +130,51 @@ void CppHighlighter::setDocument(QQuickTextDocument *quickDocument)
         QSyntaxHighlighter::setDocument(quickDocument->textDocument());
     } else {
         QSyntaxHighlighter::setDocument(nullptr);
+    }
+}
+
+QString CppHighlighter::filePath() const
+{
+    return m_filePath;
+}
+
+void CppHighlighter::setFilePath(const QString &path)
+{
+    if (m_filePath == path) return;
+    m_filePath = path;
+    emit filePathChanged();
+
+    const QString p = path.toLower();
+    Language lang = Language::Cpp;
+    if (p.endsWith(QStringLiteral(".lua")))       lang = Language::Lua;
+    else if (p.endsWith(QStringLiteral(".fish"))) lang = Language::Fish;
+
+    if (lang != m_language) {
+        m_language = lang;
+        applyLanguage();
+        rehighlight();
+    }
+}
+
+void CppHighlighter::applyLanguage()
+{
+    switch (m_language) {
+        case Language::Lua:
+            m_lineCommentToken = QStringLiteral("--");
+            m_blockStartToken  = QStringLiteral("--[[");
+            m_blockEndToken    = QStringLiteral("]]");
+            break;
+        case Language::Fish:
+            m_lineCommentToken = QStringLiteral("#");
+            m_blockStartToken.clear();
+            m_blockEndToken.clear();
+            break;
+        case Language::Cpp:
+        default:
+            m_lineCommentToken = QStringLiteral("//");
+            m_blockStartToken  = QStringLiteral("/*");
+            m_blockEndToken    = QStringLiteral("*/");
+            break;
     }
 }
 
@@ -207,7 +249,10 @@ int CppHighlighter::findMatchingBracket(const QString &docText, int index, QChar
 
 void CppHighlighter::updateBracketMatching()
 {
+    // Bracket matching is currently disabled (kept as in the original code).
+    // Remove this early return to re-enable it.
     return;
+
     // Save previous matched bracket positions so we can clear their highlights
     int oldPos1 = m_matchedBracket1;
     int oldPos2 = m_matchedBracket2;
@@ -277,9 +322,67 @@ void CppHighlighter::updateBracketMatching()
         refreshBlocks(m_matchedBracket1, m_matchedBracket2);
     }
 }
+
+// Scans the block for comments and paints them over whatever the regex rules
+// produced. Skips comment tokens that appear inside string / char literals and
+// carries block-comment state across lines via the block state.
+void CppHighlighter::applyCommentFormats(const QString &text)
+{
+    const bool hasBlock = !m_blockStartToken.isEmpty();
+    const int n = text.length();
+    int i = 0;
+    bool inBlock = hasBlock && previousBlockState() == 1;
+
+    setCurrentBlockState(0);
+
+    while (i < n) {
+        if (inBlock) {
+            const int end = text.indexOf(m_blockEndToken, i);
+            if (end == -1) {
+                setFormat(i, n - i, m_multiLineCommentFormat);
+                setCurrentBlockState(1);
+                return;
+            }
+            const int len = end + m_blockEndToken.length() - i;
+            setFormat(i, len, m_multiLineCommentFormat);
+            i += len;
+            inBlock = false;
+            continue;
+        }
+
+        const QChar c = text.at(i);
+
+        // Skip string / char literals so "http://x" is not a comment
+        if (c == QLatin1Char('"') || c == QLatin1Char('\'')) {
+            int j = i + 1;
+            while (j < n && text.at(j) != c) {
+                if (text.at(j) == QLatin1Char('\\')) ++j;
+                ++j;
+            }
+            i = j + 1;
+            continue;
+        }
+
+        // Block start must be tested before the line token (Lua: "--[[" vs "--")
+        if (hasBlock && text.mid(i, m_blockStartToken.length()) == m_blockStartToken) {
+            setFormat(i, m_blockStartToken.length(), m_multiLineCommentFormat);
+            i += m_blockStartToken.length();
+            inBlock = true;
+            continue;
+        }
+
+        if (text.mid(i, m_lineCommentToken.length()) == m_lineCommentToken) {
+            setFormat(i, n - i, m_singleLineCommentFormat);
+            return;
+        }
+
+        ++i;
+    }
+}
+
 void CppHighlighter::highlightBlock(const QString &text)
 {
-    // Apply normal syntax coloring rules
+    // 1. Normal syntax coloring rules
     for (const HighlightingRule &rule : std::as_const(m_highlightingRules)) {
         QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
         while (matchIterator.hasNext()) {
@@ -288,40 +391,24 @@ void CppHighlighter::highlightBlock(const QString &text)
         }
     }
 
-    // Handle multi-line block comments (/* ... */)
-    setCurrentBlockState(0);
-    int startIndex = 0;
-    if (previousBlockState() != 1) {
-        startIndex = text.indexOf(m_commentStartPattern);
-    }
+    // 2. Comments last, so they override every rule above
+    applyCommentFormats(text);
 
-    while (startIndex >= 0) {
-        QRegularExpressionMatch endMatch;
-        int endIndex = text.indexOf(m_commentEndPattern, startIndex, &endMatch);
-        int commentLength;
-        if (endIndex == -1) {
-            setCurrentBlockState(1);
-            commentLength = text.length() - startIndex;
-        } else {
-            commentLength = endIndex - startIndex + endMatch.capturedLength();
-        }
-        setFormat(startIndex, commentLength, m_multiLineCommentFormat);
-        startIndex = text.indexOf(m_commentStartPattern, startIndex + commentLength);
-    }
-
-    // Word occurrence highlighting (when text is double-clicked/selected)
+    // 3. Word occurrence highlighting (background only, keeps the text color)
     if (!m_highlightedWord.trimmed().isEmpty() && m_highlightedWord.length() > 1) {
         QRegularExpression wordRegex(QStringLiteral("\\b") + QRegularExpression::escape(m_highlightedWord) + QStringLiteral("\\b"));
         QRegularExpressionMatchIterator it = wordRegex.globalMatch(text);
-        QTextCharFormat wordFormat;
-        wordFormat.setBackground(QColor("#3e4451"));
         while (it.hasNext()) {
             QRegularExpressionMatch match = it.next();
-            setFormat(match.capturedStart(), match.capturedLength(), wordFormat);
+            for (int k = match.capturedStart(); k < match.capturedEnd(); ++k) {
+                QTextCharFormat f = format(k);
+                f.setBackground(QColor("#3e4451"));
+                setFormat(k, 1, f);
+            }
         }
     }
 
-    // Bracket / Brace pair matching highlight
+    // 4. Bracket / Brace pair matching highlight
     int blockStart = currentBlock().position();
     int blockEnd = blockStart + text.length();
 

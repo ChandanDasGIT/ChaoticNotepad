@@ -13,11 +13,14 @@ Item {
     property int editorFontSize: 13
     property string editorFontFamily: "Monospace"
     property string diskContent: ""
+    property string originalContent: ""
     property string currentFilePath: ""
     property bool isProgrammaticChange: false
 
     signal textModified()
     signal zoomRequested(int delta)
+
+    function realText() { return lineGutter.realText(); }
 
     Minimap {
         id: minimap
@@ -82,6 +85,8 @@ Item {
         function updateHighlighter() {
             if (!editor.textDocument) return;
 
+            highlighter.filePath = root.currentFilePath;
+
             var path = root.currentFilePath.toLowerCase();
             var isSupported = path.endsWith(".cpp")  ||
                               path.endsWith(".h")    ||
@@ -143,6 +148,7 @@ Item {
                     editor: editor
                     appPalette: root.appPalette
                     diskContent: root.diskContent
+                    originalContent: root.originalContent
                     editorFontFamily: root.editorFontFamily
                     editorFontSize: root.editorFontSize
                 }
