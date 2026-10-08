@@ -4,8 +4,73 @@ QtObject {
     id: root
 
     required property var editor
+    property var multi: null
+
+    function handleMultiCursorKey(event) {
+        var pos = editor.cursorPosition;
+        var mods = event.modifiers;
+        var blocked = Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier;
+
+        if (event.key === Qt.Key_Escape) {
+            multi.clear();
+            event.accepted = true;
+            return true;
+        }
+
+        // Movement: extra carets move here, the main caret moves natively afterwards
+        if (!(mods & Qt.AltModifier)) {
+            var dir = "";
+            if (event.key === Qt.Key_Left) dir = "left";
+            else if (event.key === Qt.Key_Right) dir = "right";
+            else if (event.key === Qt.Key_Up) dir = "up";
+            else if (event.key === Qt.Key_Down) dir = "down";
+            else if (event.key === Qt.Key_Home) dir = "home";
+            else if (event.key === Qt.Key_End) dir = "end";
+            if (dir !== "") {
+                if (mods & Qt.ShiftModifier) {
+                    multi.clear();   // selections aren't supported with several carets
+                    return true;
+                }
+                multi.move(dir, (mods & Qt.ControlModifier) !== 0);
+                return true;         // left unaccepted so TextEdit moves the main caret
+            }
+        }
+
+        if (event.key === Qt.Key_Backspace && !(mods & blocked)) {
+            editor.cursorPosition = multi.deleteBackward(pos);
+            event.accepted = true;
+            return true;
+        }
+        if (event.key === Qt.Key_Delete && !(mods & blocked)) {
+            editor.cursorPosition = multi.deleteForward(pos);
+            event.accepted = true;
+            return true;
+        }
+        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(mods & blocked)) {
+            editor.cursorPosition = multi.insertNewline(pos);
+            event.accepted = true;
+            return true;
+        }
+        if (event.key === Qt.Key_Tab && !(mods & blocked)) {
+            editor.cursorPosition = multi.insertText("    ", pos);
+            event.accepted = true;
+            return true;
+        }
+        if (event.key === Qt.Key_Backtab) {
+            event.accepted = true;
+            return true;
+        }
+        if (!(mods & blocked) && event.text.length === 1 && event.text.charCodeAt(0) >= 32) {
+            editor.cursorPosition = multi.insertText(event.text, pos);
+            event.accepted = true;
+            return true;
+        }
+        return false;
+    }
 
     function handleKeyPress(event) {
+        if (multi && multi.active && handleMultiCursorKey(event)) return;
+
         var pos = editor.cursorPosition;
         var doc = editor.text;
 

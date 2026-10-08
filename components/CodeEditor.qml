@@ -17,6 +17,17 @@ Item {
     property string currentFilePath: ""
     property bool isProgrammaticChange: false
 
+    property int caretTick: 0
+    property int prevCaret: 0
+    property int curCaret: 0
+
+    MultiCursor { id: multiCaret }
+
+    Connections {
+        target: multiCaret
+        function onPositionsChanged() { Qt.callLater(function() { root.caretTick++; }); }
+    }
+
     signal textModified()
     signal zoomRequested(int delta)
 
@@ -69,6 +80,9 @@ Item {
             function onSelectionStartChanged() { selectionTimer.restart(); }
             function onSelectionEndChanged()   { selectionTimer.restart(); }
             function onCursorPositionChanged() {
+                root.prevCaret = root.curCaret;
+                root.curCaret = editor.cursorPosition;
+                multiCaret.mergeWith(editor.cursorPosition);
                 selectionTimer.restart();
                 editor.cursorVisible = false;
                 Qt.callLater(function() {
@@ -177,11 +191,13 @@ Item {
                     EditorKeyHandler {
                         id: keyHandler
                         editor: editor
+                        multi: multiCaret
                     }
 
                     Component.onCompleted: {
                         editorFlickable.updateHighlighter();
                         editor.forceActiveFocus();
+                        multiCaret.setDocument(editor.textDocument);
                     }
 
                     MouseArea {
@@ -197,6 +213,44 @@ Item {
                             editor.forceActiveFocus();
                             editor.cursorPosition = editor.text.length;
                         }
+                    }
+
+                    Repeater {
+                        model: multiCaret.positions
+                        delegate: Rectangle {
+                            required property int modelData
+                            readonly property rect caretRect: {
+                                root.caretTick; editor.width; editor.contentHeight; editor.font.pixelSize;
+                                return editor.positionToRectangle(modelData);
+                            }
+                            x: caretRect.x
+                            y: caretRect.y
+                            width: 2
+                            height: caretRect.height > 0 ? caretRect.height : editor.font.pixelSize + 4
+                            color: editor.color
+                            visible: editor.activeFocus
+                            z: 5
+                        }
+                    }
+
+                    // Alt+click adds a caret
+                    TapHandler {
+                        acceptedButtons: Qt.LeftButton
+                        acceptedModifiers: Qt.AltModifier
+                        onTapped: function(eventPoint) {
+                            var clicked = editor.positionAt(eventPoint.position.x, eventPoint.position.y);
+                            if (clicked === root.curCaret && root.prevCaret !== root.curCaret)
+                                multiCaret.addCursor(root.prevCaret);   // the click moved the main caret; keep the old spot too
+                                else if (clicked !== root.curCaret)
+                                    multiCaret.addCursor(clicked);
+                        }
+                    }
+
+                    // A normal click goes back to a single caret
+                    TapHandler {
+                        acceptedButtons: Qt.LeftButton
+                        acceptedModifiers: Qt.NoModifier
+                        onTapped: multiCaret.clear()
                     }
 
                     Keys.onPressed: function(event) {
