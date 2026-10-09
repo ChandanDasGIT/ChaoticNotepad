@@ -13,9 +13,16 @@ Make sure you have CMake, a C++20 compiler, and Qt 6 development packages instal
 2. Extract and run the installer:
 
 `
-  tar -xf ChaoticNotepad-v0.1-source.tar.xz
-  cd ChaoticNotepad-v0.1-source
-  sudo ./install.sh
+  tar -xf ChaoticNotepad-v0.1.0-linux-x86_64.tar.xz
+`
+ ` 
+  cd ChaoticNotepad-linux-x86_64
+` 
+`
+  chmod +x install.sh
+ ` 
+`  
+  ./install.sh
 `
 
 or, use git clone:
