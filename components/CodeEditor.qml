@@ -33,6 +33,23 @@ Item {
 
     function realText() { return lineGutter.realText(); }
 
+    // Scroll so the text position `pos` is on screen. If it is off-screen,
+    // it gets centred; if already comfortably visible, nothing moves.
+    function ensureVisible(pos) {
+        var r = editor.positionToRectangle(pos);
+        var p = editor.mapToItem(editorFlickable.contentItem, r.x, r.y);
+        var margin = 30;
+        var viewTop = editorFlickable.contentY;
+        var viewBottom = viewTop + editorFlickable.height;
+
+        if (p.y >= viewTop + margin && p.y + r.height <= viewBottom - margin)
+            return;
+
+        var maxY = Math.max(0, editorFlickable.contentHeight - editorFlickable.height);
+        var target = p.y + r.height / 2 - editorFlickable.height / 2;
+        editorFlickable.contentY = Math.max(0, Math.min(maxY, target));
+    }
+
     Minimap {
         id: minimap
         anchors.top: parent.top
@@ -179,6 +196,7 @@ Item {
                     font.family: root.editorFontFamily
                     font.pixelSize: root.editorFontSize
                     selectByMouse: true
+                    persistentSelection: true
                     focus: true
                     activeFocusOnTab: true
                   //  cursorVisible: activeFocus
@@ -258,7 +276,7 @@ Item {
                     }
 
                     onTextChanged: {
-                        if (!isProgrammaticChange && editor.activeFocus && !editor.isHandlingSpecialKey) {
+                        if (!isProgrammaticChange && !editor.isHandlingSpecialKey) {
                             root.textModified();
                         }
                     }

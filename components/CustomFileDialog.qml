@@ -37,6 +37,7 @@ Popup {
 
     Shortcut {
         sequence: "Ctrl+H"
+        enabled: filePopup.visible
         onActivated: hiddenSwitch.checked = !hiddenSwitch.checked
     }
 
@@ -88,11 +89,10 @@ Popup {
                     verticalAlignment: Text.AlignVCenter
                     font.pixelSize: 11
                     color: appPalette.textMain
-                    text: folderModel.folder.toString().replace("file://", "")
+                    text: FileIO.toLocalPath(folderModel.folder.toString())
                     selectByMouse: true
                     onAccepted: {
-                        var cleaned = text.startsWith("/") ? "file://" + text : text;
-                        filePopup.currentFolder = cleaned;
+                        filePopup.currentFolder = text.startsWith("/") ? FileIO.toFileUrl(text) : text;
                     }
                 }
             }
@@ -190,7 +190,7 @@ Popup {
                             if (fileIsDir) {
                                 filePopup.currentFolder = fileUrl;
                             } else {
-                                var diskPath = filePath.toString().replace("file://", "");
+                                var diskPath = FileIO.toLocalPath(filePath.toString());
                                 filePopup.fileConfirmed(diskPath, fileName, filePopup.isSaveMode);
                                 filePopup.close();
                             }
@@ -257,7 +257,7 @@ Popup {
                 }
                 onClicked: {
                     if (fileNameInput.text.trim() === "") return;
-                    var baseDir = folderModel.folder.toString().replace("file://", "");
+                    var baseDir = FileIO.toLocalPath(folderModel.folder.toString());
                     var full = baseDir + "/" + fileNameInput.text.trim();
                     filePopup.fileConfirmed(full, fileNameInput.text.trim(), filePopup.isSaveMode);
                     filePopup.close();

@@ -7,6 +7,9 @@
 #include <QFileInfo>
 #include <QFileSystemWatcher>
 #include <QHash>
+#include <QUrl>
+#include <QVariantMap>
+#include <QStringConverter>
 #include <QtQml/qqmlregistration.h>
 
 class FileIO : public QObject
@@ -22,22 +25,67 @@ public:
         connect(m_watcher, &QFileSystemWatcher::fileChanged, this, &FileIO::onFileChanged);
     }
 
-    Q_INVOKABLE QString readFile(const QString &filePath) {
-        if (filePath.isEmpty()) return QString();
+    // Returns { ok: bool, text: string, error: string }.
+    // A failed read is reported instead of returning "", so the caller never
+    // mistakes a missing/unreadable file for an empty one.
+    Q_INVOKABLE QVariantMap readFileResult(const QString &filePath) {
+        QVariantMap result;
+        result.insert(QStringLiteral("ok"), false);
+        result.insert(QStringLiteral("text"), QString());
 
-        QFile file(filePath);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            return QString();
+        if (filePath.isEmpty()) {
+            result.insert(QStringLiteral("error"), QStringLiteral("No file path given."));
+            return result;
         }
 
-        QTextStream in(&file);
-        QString content = in.readAll();
+        const QFileInfo info(filePath);
+        if (!info.exists()) {
+            result.insert(QStringLiteral("error"), QStringLiteral("File not found: %1").arg(filePath));
+            return result;
+        }
+        if (!info.isFile()) {
+            result.insert(QStringLiteral("error"), QStringLiteral("Not a regular file: %1").arg(filePath));
+            return result;
+        }
+
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            result.insert(QStringLiteral("error"),
+                          QStringLiteral("Cannot open %1: %2").arg(filePath, file.errorString()));
+            return result;
+        }
+        const QByteArray data = file.readAll();
         file.close();
 
-        // Automatically watch any file successfully opened and read
+        if (data.contains('\0')) {
+            result.insert(QStringLiteral("error"),
+                          QStringLiteral("%1 looks like a binary file; not opened.").arg(info.fileName()));
+            return result;
+        }
+
+        // Strict UTF-8: refuse files that would be silently mangled on save
+        QStringDecoder decoder(QStringConverter::Utf8, QStringConverter::Flag::Stateless);
+        QString content = decoder(data);
+        if (decoder.hasError()) {
+            result.insert(QStringLiteral("error"),
+                          QStringLiteral("%1 is not valid UTF-8 text; not opened to avoid corrupting it.")
+                          .arg(info.fileName()));
+            return result;
+        }
+
+        // Same line-ending handling as the old QIODevice::Text read
+        content.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+
         watchFileInternal(filePath);
 
-        return content;
+        result[QStringLiteral("ok")] = true;
+        result[QStringLiteral("text")] = content;
+        return result;
+    }
+
+    // Kept for compatibility: empty string on failure. Prefer readFileResult().
+    Q_INVOKABLE QString readFile(const QString &filePath) {
+        return readFileResult(filePath).value(QStringLiteral("text")).toString();
     }
 
     Q_INVOKABLE bool writeFile(const QString &filePath, const QString &content) {
@@ -51,7 +99,9 @@ public:
         QTextStream out(&file);
         out << content;
         out.flush();
+        const bool wrote = (out.status() == QTextStream::Ok) && (file.error() == QFile::NoError);
         file.close();
+        if (!wrote) return false;
 
         // Remember what we wrote so the watcher can recognise its own save
         m_lastWritten.insert(filePath, content);
@@ -68,6 +118,22 @@ public:
             m_watcher->removePath(filePath);
         }
         m_lastWritten.remove(filePath);
+    }
+
+    // "file:///home/me/my%20docs/a.txt" -> "/home/me/my docs/a.txt".
+    // Plain paths are returned unchanged.
+    Q_INVOKABLE QString toLocalPath(const QString &urlOrPath) const {
+        if (urlOrPath.startsWith(QStringLiteral("file:")))
+            return QUrl(urlOrPath).toLocalFile();
+        return urlOrPath;
+    }
+
+    Q_INVOKABLE QUrl toFileUrl(const QString &localPath) const {
+        return QUrl::fromLocalFile(localPath);
+    }
+
+    Q_INVOKABLE bool fileExists(const QString &filePath) const {
+        return QFileInfo::exists(filePath);
     }
 
 signals:

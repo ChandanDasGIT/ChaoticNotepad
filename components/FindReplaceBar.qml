@@ -20,6 +20,7 @@ Rectangle {
 
     property var searchMatches: []
     property int currentSearchIndex: -1
+    signal matchSelected(int position)
 
     function show(withReplace) {
         replaceRow.visible = withReplace;
@@ -61,6 +62,23 @@ Rectangle {
         }
     }
 
+    // Updates matches and the "n of m" label without touching selection/caret
+    function refreshMatches() {
+        if (!targetEditor || findInput.text.length === 0) return;
+
+        searchMatches = textSearcher.findAll(targetEditor.text, findInput.text, false, true);
+
+        if (!searchMatches || searchMatches.length === 0) {
+            currentSearchIndex = -1;
+            statusLabel.text = "0 of 0";
+            return;
+        }
+
+        if (currentSearchIndex < 0) currentSearchIndex = 0;
+        if (currentSearchIndex >= searchMatches.length) currentSearchIndex = searchMatches.length - 1;
+        statusLabel.text = (currentSearchIndex + 1) + " of " + searchMatches.length;
+    }
+
     function jumpTo(index) {
         if (!targetEditor || !searchMatches || searchMatches.length === 0) return;
         currentSearchIndex = (index + searchMatches.length) % searchMatches.length;
@@ -71,6 +89,7 @@ Rectangle {
         targetEditor.cursorPosition = end;
         targetEditor.select(start, end);
         statusLabel.text = (currentSearchIndex + 1) + " of " + searchMatches.length;
+        matchSelected(start);
     }
 
     function findNext() {

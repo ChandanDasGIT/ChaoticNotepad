@@ -23,7 +23,21 @@ Popup {
     focus: true
     closePolicy: Popup.CloseOnEscape
 
-    onOpened: saveBtn.forceActiveFocus()
+    property bool decided: false
+
+    onSaveRequested: decided = true
+    onDiscardRequested: decided = true
+    onCancelRequested: decided = true
+
+    onOpened: {
+        decided = false;
+        saveBtn.forceActiveFocus();
+    }
+
+    // Closed any other way (e.g. Esc handled by the Popup) counts as Cancel
+    onClosed: {
+        if (!decided) cancelRequested();
+    }
 
     background: Rectangle {
         color: (root.appPalette && root.appPalette.popupBg) ? root.appPalette.popupBg : "#21252b"

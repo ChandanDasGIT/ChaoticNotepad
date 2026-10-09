@@ -20,6 +20,39 @@ ApplicationWindow {
     property int tabPendingClose: -1
     property string fileModifiedOnDisk: ""
 
+    property string errorText: ""
+
+    function showError(message) {
+        appWindow.errorText = message;
+        errorTimer.restart();
+    }
+
+    // Forget any half-finished "save then close" request
+    function resetPendingClose() {
+        appWindow.tabPendingClose = -1;
+        appWindow.isClosingWindow = false;
+    }
+
+    property string pendingOverwritePath: ""
+
+    function confirmOverwrite() {
+        var p = appWindow.pendingOverwritePath;
+        appWindow.pendingOverwritePath = "";
+        appWindow.performSave(p, true);
+    }
+
+    // Back to the picker so the user can choose another name
+    function cancelOverwrite() {
+        appWindow.pendingOverwritePath = "";
+        customFileDialog.openPicker(true);
+    }
+
+    Timer {
+        id: errorTimer
+        interval: 5000
+        onTriggered: appWindow.errorText = ""
+    }
+
     Settings {
         id: appSettings
         location: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/NotepadQtQuick/config.conf"
@@ -87,6 +120,8 @@ ApplicationWindow {
             }
             return true;
         }
+        appWindow.showError("Could not save \"" + targetPath + "\". Check permissions and free space.");
+        appWindow.resetPendingClose();
         return false;
     }
 
@@ -105,10 +140,15 @@ ApplicationWindow {
     }
 
     function openFilePath(fullPath) {
-        var cleanPath = fullPath.toString().replace(/^file:\/\//, "");
+        var cleanPath = FileIO.toLocalPath(fullPath.toString());
         var slash = cleanPath.lastIndexOf("/");
         var fileName = slash !== -1 ? cleanPath.substring(slash + 1) : cleanPath;
-        var fileText = FileIO.readFile(cleanPath);
+        var readResult = FileIO.readFileResult(cleanPath);
+        if (!readResult.ok) {
+            appWindow.showError(readResult.error);
+            return false;
+        }
+        var fileText = readResult.text;
 
         if (tabs.currentTab && tabs.currentTab.filePath === "" && !tabs.currentTab.isDirty && codeEditor.text === "") {
             appWindow.isSyncingEditor = true;
@@ -122,6 +162,7 @@ ApplicationWindow {
             codeEditor.diskContent = fileText;
         }
         saveSessionState();
+        return true;
     }
 
     function saveSessionState() {
@@ -165,7 +206,7 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+-"; onActivated: appWindow.adjustZoom(-1) }
     Shortcut { sequence: "Ctrl+0"; onActivated: settingsDialog.fontSize = 13 }
     Shortcut { sequence: "Ctrl+F"; onActivated: findBar.show(false) }
-    Shortcut { sequence: "Ctrl+H"; onActivated: findBar.show(true) }
+    //Shortcut { sequence: "Ctrl+H"; onActivated: findBar.show(true) }
     Shortcut { sequence: "Ctrl+S"; onActivated: appWindow.saveActiveFile() }
     Shortcut { sequence: "Ctrl+Shift+S"; onActivated: appWindow.saveActiveFileAs() }
     Shortcut { sequence: "Ctrl+Z"; onActivated: codeEditor.textEdit.undo() }
@@ -263,8 +304,8 @@ ApplicationWindow {
                 onTextModified: {
                     if (!appWindow.isSyncingEditor) {
                         tabs.markCurrentDirty(codeEditor.realText());
-                        if (findBar.visible && !findBar.activeFocus) {
-                            findBar.updateSearch();
+                        if (findBar.visible) {
+                            findBar.refreshMatches();
                         }
                     }
                 }
@@ -318,7 +359,12 @@ ApplicationWindow {
                         }
                         onClicked: {
                             if (tabs.currentTab && tabs.currentTab.filePath !== "") {
-                                var diskText = FileIO.readFile(tabs.currentTab.filePath);
+                                var reloadResult = FileIO.readFileResult(tabs.currentTab.filePath);
+                                if (!reloadResult.ok) {
+                                    appWindow.showError(reloadResult.error);
+                                    return;
+                                }
+                                var diskText = reloadResult.text;
                                 appWindow.isSyncingEditor = true;
                                 codeEditor.text = diskText;
                                 codeEditor.diskContent = diskText;
@@ -350,6 +396,34 @@ ApplicationWindow {
                         onClicked: reloadBanner.visible = false
                     }
                 }
+            }
+
+            Rectangle {
+                id: errorBanner
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottomMargin: 14
+                width: Math.min(parent.width - 40, 560)
+                height: errorLabel.implicitHeight + 20
+                radius: 6
+                z: 21
+                visible: appWindow.errorText !== ""
+                color: appPalette.popupBg
+                border.color: appPalette.danger
+                border.width: 1
+
+                Text {
+                    id: errorLabel
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    text: appWindow.errorText
+                    font.pixelSize: 12
+                    color: appPalette.textMain
+                    wrapMode: Text.WordWrap
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                TapHandler { onTapped: appWindow.errorText = "" }
             }
 
             DropArea {
@@ -390,6 +464,11 @@ ApplicationWindow {
                 z: 10
                 appPalette: appPalette
                 targetEditor: codeEditor.textEdit
+
+                onMatchSelected: function(position) {
+                    // Deferred so the editor has finished laying out any text change
+                    Qt.callLater(function() { codeEditor.ensureVisible(position); });
+                }
             }
         }
 
@@ -412,9 +491,24 @@ ApplicationWindow {
     CustomFileDialog {
         id: customFileDialog
         appPalette: appPalette
+
+        property bool pickedFile: false
+        onOpened: pickedFile = false
+        onClosed: {
+            if (!pickedFile && appWindow.tabPendingClose !== -1)
+                appWindow.resetPendingClose();
+        }
+
         onFileConfirmed: function(fullPath, fileName, isSave) {
+            pickedFile = true;
             if (isSave) {
-                appWindow.performSave(fullPath, true);
+                var sameAsCurrent = tabs.currentTab && tabs.currentTab.filePath === fullPath;
+                if (FileIO.fileExists(fullPath) && !sameAsCurrent) {
+                    appWindow.pendingOverwritePath = fullPath;
+                    overwritePrompt.open();
+                } else {
+                    appWindow.performSave(fullPath, true);
+                }
             } else {
                 appWindow.openFilePath(fullPath);
             }
@@ -431,6 +525,7 @@ ApplicationWindow {
         onDiscardRequested: {
             var target = tabPendingClose;
             tabPendingClose = -1;
+            if (target < 0 || target >= tabs.model.count) return;
             tabs.closeTab(target);
             saveSessionState();
 
@@ -449,11 +544,114 @@ ApplicationWindow {
         }
         onSaveRequested: {
             var target = tabPendingClose;
+            if (target < 0 || target >= tabs.model.count) return;
+
+            // performSave()/markSaved() always work on the active tab, so
+            // bring the tab being closed to the front first
+            if (target !== tabs.currentIndex) {
+                reloadBanner.visible = false;
+                tabs.selectTab(target, codeEditor.realText());
+            }
+
             var tab = tabs.model.get(target);
             if (tab.filePath !== "") {
                 appWindow.performSave(tab.filePath, true);
             } else {
                 customFileDialog.openPicker(true);
+            }
+        }
+    }
+    Popup {
+        id: overwritePrompt
+        parent: Overlay.overlay
+        x: Math.round((parent.width - width) / 2)
+        y: Math.round((parent.height - height) / 2)
+        width: 380
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape
+
+        property bool decided: false
+        onOpened: decided = false
+        onClosed: { if (!decided) appWindow.cancelOverwrite(); }
+
+        background: Rectangle {
+            color: appPalette.popupBg
+            border.color: appPalette.border
+            border.width: 1
+            radius: 8
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 14
+
+            Label {
+                text: "Replace existing file?"
+                font.bold: true
+                font.pixelSize: 14
+                color: appPalette.textMain
+                Layout.fillWidth: true
+            }
+
+            Label {
+                text: "\"" + appWindow.pendingOverwritePath.substring(appWindow.pendingOverwritePath.lastIndexOf("/") + 1)
+                + "\" already exists. Saving will overwrite its contents."
+                font.pixelSize: 12
+                color: appPalette.textMuted
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            RowLayout {
+                Layout.alignment: Qt.AlignRight
+                spacing: 8
+
+                Button {
+                    id: owCancelBtn
+                    contentItem: Text {
+                        text: "Cancel"
+                        font.pixelSize: 12
+                        color: appPalette.textMain
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        implicitWidth: 70
+                        implicitHeight: 28
+                        radius: 4
+                        color: owCancelBtn.down ? appPalette.highlight : appPalette.tabBg
+                        border.color: appPalette.border
+                        border.width: 1
+                    }
+                    onClicked: {
+                        overwritePrompt.decided = true;
+                        overwritePrompt.close();
+                        appWindow.cancelOverwrite();
+                    }
+                }
+
+                Button {
+                    id: owReplaceBtn
+                    contentItem: Text {
+                        text: "Replace"
+                        font.pixelSize: 12
+                        font.bold: true
+                        color: "#ffffff"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        implicitWidth: 80
+                        implicitHeight: 28
+                        radius: 4
+                        color: owReplaceBtn.down ? Qt.darker(appPalette.danger, 1.25) : appPalette.danger
+                    }
+                    onClicked: {
+                        overwritePrompt.decided = true;
+                        overwritePrompt.close();
+                        appWindow.confirmOverwrite();
+                    }
+                }
             }
         }
     }

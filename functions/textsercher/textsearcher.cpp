@@ -1,6 +1,27 @@
 #include "textsearcher.h"
 #include <QRegularExpression>
 
+namespace {
+
+    bool isWordChar(QChar c)
+    {
+        return c.isLetterOrNumber() || c == QLatin1Char('_');
+    }
+
+    // \b only where the query's edge is a word character. "();" or "->" have no
+    // word-character edge, so \b would make them impossible to match.
+    QString wholeWordPattern(const QString &query)
+    {
+        QString p = QRegularExpression::escape(query);
+        if (isWordChar(query.front()))
+            p.prepend(QStringLiteral("\\b"));
+        if (isWordChar(query.back()))
+            p.append(QStringLiteral("\\b"));
+        return p;
+    }
+
+} // namespace
+
 TextSearcher::TextSearcher(QObject *parent)
     : QObject(parent)
 {
@@ -14,8 +35,8 @@ QList<int> TextSearcher::findAll(const QString &text, const QString &query, bool
     }
 
     if (wholeWord) {
-        QString pattern = QStringLiteral("\\b") + QRegularExpression::escape(query) + QStringLiteral("\\b");
-        QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+        const QString pattern = wholeWordPattern(query);
+        QRegularExpression::PatternOptions options = QRegularExpression::UseUnicodePropertiesOption;
         if (!caseSensitive) {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
@@ -66,8 +87,8 @@ QString TextSearcher::replaceAll(const QString &text, const QString &query, cons
     }
 
     if (wholeWord) {
-        QString pattern = QStringLiteral("\\b") + QRegularExpression::escape(query) + QStringLiteral("\\b");
-        QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+        const QString pattern = wholeWordPattern(query);
+        QRegularExpression::PatternOptions options = QRegularExpression::UseUnicodePropertiesOption;
         if (!caseSensitive) {
             options |= QRegularExpression::CaseInsensitiveOption;
         }

@@ -6,6 +6,14 @@ QtObject {
     required property var editor
     property var multi: null
 
+    // Start index of the line containing position p. The old
+    // lastIndexOf("\n", p - 1) is wrong at p === 0: a negative fromIndex is
+    // clamped to 0, so a doc starting with "\n" gives a false match.
+    function lineStartOf(doc, p) {
+        if (p <= 0) return 0;
+        return doc.lastIndexOf("\n", p - 1) + 1;
+    }
+
     function handleMultiCursorKey(event) {
         var pos = editor.cursorPosition;
         var mods = event.modifiers;
@@ -80,8 +88,8 @@ QtObject {
             var sStart = (editor.selectionStart !== editor.selectionEnd) ? editor.selectionStart : pos;
             var sEnd = (editor.selectionStart !== editor.selectionEnd) ? editor.selectionEnd : pos;
 
-            var blockStart = doc.lastIndexOf("\n", sStart - 1);
-            var startBound = (blockStart === -1) ? 0 : blockStart + 1;
+            var startBound = lineStartOf(doc, sStart);
+
             var blockEnd = doc.indexOf("\n", sEnd);
             var endBound = (blockEnd === -1) ? doc.length : blockEnd;
 
@@ -94,8 +102,7 @@ QtObject {
                     var aboveLine = lines[startLine - 1];
                     lines.splice(startLine - 1, 1);
                     lines.splice(endLine, 0, aboveLine);
-                    var prevLineStart = doc.lastIndexOf("\n", startBound - 2);
-                    var replaceStart = (prevLineStart === -1) ? 0 : prevLineStart + 1;
+                    var replaceStart = lineStartOf(doc, startBound - 1);
                     var newChunk = lines.slice(startLine - 1, endLine + 1).join("\n");
 
                     editor.remove(replaceStart, endBound);
@@ -115,7 +122,7 @@ QtObject {
 
                     editor.remove(startBound, replaceEnd);
                     editor.insert(startBound, newChunk2);
-                    var shiftedStart2 = lines.slice(0, startLine + 1).join("\n").length - (lines[startLine + 1].length);
+                    var shiftedStart2 = lines.slice(0, startLine + 1).join("\n").length + 1;
                     var shiftedEnd2 = lines.slice(0, endLine + 2).join("\n").length;
                     editor.select(shiftedStart2, shiftedEnd2);
                 }
@@ -132,8 +139,7 @@ QtObject {
                 var selStart = editor.selectionStart;
                 var selEnd = editor.selectionEnd;
 
-                var bStart = doc.lastIndexOf("\n", selStart - 1);
-                var rStart = (bStart === -1) ? 0 : bStart + 1;
+                var rStart = lineStartOf(doc, selStart);
                 var bEnd = doc.indexOf("\n", selEnd);
                 var rEnd = (bEnd === -1) ? doc.length : bEnd;
 
@@ -160,8 +166,7 @@ QtObject {
                 editor.select(rStart, rEnd + netOffsetChange);
             } else {
                 if (isShift) {
-                    var lStart = doc.lastIndexOf("\n", pos - 1);
-                    var sIdx = (lStart === -1) ? 0 : lStart + 1;
+                    var sIdx = lineStartOf(doc, pos);
                     var linePrefix = doc.substring(sIdx, pos);
                     var spacesToRemove = linePrefix.match(/( {1,4}|\t)$/);
                     if (spacesToRemove) {
@@ -178,8 +183,7 @@ QtObject {
 
         // 3. Ctrl + / (Comment / Uncomment)
         if (event.modifiers === Qt.ControlModifier && event.key === Qt.Key_Slash) {
-            var cLineStart = doc.lastIndexOf("\n", pos - 1);
-            var cStartIdx = (cLineStart === -1) ? 0 : cLineStart + 1;
+            var cStartIdx = lineStartOf(doc, pos);
             var cLineEnd = doc.indexOf("\n", pos);
             var cEndIdx = (cLineEnd === -1) ? doc.length : cLineEnd;
             var currentLine = doc.substring(cStartIdx, cEndIdx);
@@ -211,8 +215,7 @@ QtObject {
                 editor.insert(insertAt, sel);
                 editor.cursorPosition = insertAt + sel.length;
             } else {
-                var dLineStart = doc.lastIndexOf("\n", pos - 1);
-                var dSIdx = (dLineStart === -1) ? 0 : dLineStart + 1;
+                var dSIdx = lineStartOf(doc, pos);
                 var dLineEnd = doc.indexOf("\n", pos);
                 var dEIdx = (dLineEnd === -1) ? doc.length : dLineEnd;
                 var fullLine = doc.substring(dSIdx, dEIdx);
@@ -230,8 +233,7 @@ QtObject {
             var charAfter = (pos < doc.length) ? doc.charAt(pos) : "";
 
             if (charBefore === "{" && charAfter === "}") {
-                var brStart = doc.lastIndexOf("\n", pos - 1);
-                var brLine = doc.substring(brStart === -1 ? 0 : brStart + 1, pos - 1);
+                var brLine = doc.substring(lineStartOf(doc, pos - 1), pos - 1);
                 var brIndent = (brLine.match(/^(\s*)/) || ["", ""])[1];
                 var extra = "    ";
 
@@ -241,8 +243,7 @@ QtObject {
                 return;
             }
 
-            var curStart = doc.lastIndexOf("\n", pos - 1);
-            var curLine = doc.substring(curStart === -1 ? 0 : curStart + 1, pos);
+            var curLine = doc.substring(lineStartOf(doc, pos), pos);
             var matchWs = curLine.match(/^(\s*)/);
             var leadWs = matchWs ? matchWs[1] : "";
 
