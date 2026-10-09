@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QString>
 #include <QList>
+#include <QQuickTextDocument>
 #include <QtQml/qqmlregistration.h>
 
 class TextSearcher : public QObject {
@@ -22,4 +23,10 @@ public:
 
     // Added wholeWord parameter (defaults to true)
     Q_INVOKABLE QString replaceAll(const QString &text, const QString &query, const QString &replacement, bool caseSensitive = false, bool wholeWord = true);
+
+    // Edits go straight into the editor's document inside ONE edit block,
+    // so a single Ctrl+Z undoes the whole operation. Return the match count.
+    Q_INVOKABLE int replaceAllInDocument(QQuickTextDocument *doc, const QString &query, const QString &replacement,
+                                         bool caseSensitive = false, bool wholeWord = true);
+    Q_INVOKABLE void replaceRange(QQuickTextDocument *doc, int start, int length, const QString &replacement);
 };

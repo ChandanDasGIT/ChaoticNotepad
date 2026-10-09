@@ -103,40 +103,18 @@ Rectangle {
     }
 
     function replaceCurrent() {
-            if (!targetEditor || currentSearchIndex === -1 || !searchMatches || searchMatches.length === 0) return;
-            var start = searchMatches[currentSearchIndex];
-            var queryLen = findInput.text.length;
-            var repText = replaceInput.text;
+        if (!targetEditor || currentSearchIndex === -1 || !searchMatches || searchMatches.length === 0) return;
+        var start = searchMatches[currentSearchIndex];
+        textSearcher.replaceRange(targetEditor.textDocument, start, findInput.text.length, replaceInput.text);
+        updateSearch();
+    }
 
-            // Use remove and insert to preserve the undo/redo stack
-            targetEditor.remove(start, start + queryLen);
-            if (repText.length > 0) {
-                targetEditor.insert(start, repText);
-            }
-            updateSearch();
-        }
-
-        function replaceAll() {
-            if (!targetEditor || findInput.text.length === 0) return;
-
-            // Fetch all whole-word match offsets
-            var matches = textSearcher.findAll(targetEditor.text, findInput.text, false, true);
-            if (!matches || matches.length === 0) return;
-
-            var queryLen = findInput.text.length;
-            var repText = replaceInput.text;
-
-            // Iterate backwards from the end so earlier match offsets remain intact
-            for (var i = matches.length - 1; i >= 0; --i) {
-                var start = matches[i];
-                targetEditor.remove(start, start + queryLen);
-                if (repText.length > 0) {
-                    targetEditor.insert(start, repText);
-                }
-            }
-
-            updateSearch();
-        }
+    function replaceAll() {
+        if (!targetEditor || findInput.text.length === 0) return;
+        var count = textSearcher.replaceAllInDocument(targetEditor.textDocument,
+                                                      findInput.text, replaceInput.text, false, true);
+        if (count > 0) updateSearch();
+    }
 
     ColumnLayout {
         anchors.fill: parent

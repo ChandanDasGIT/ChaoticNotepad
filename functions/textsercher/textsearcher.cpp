@@ -1,5 +1,7 @@
 #include "textsearcher.h"
 #include <QRegularExpression>
+#include <QTextCursor>
+#include <QTextDocument>
 
 namespace {
 
@@ -103,4 +105,45 @@ QString TextSearcher::replaceAll(const QString &text, const QString &query, cons
         result.replace(query, replacement, cs);
         return result;
     }
+}
+
+int TextSearcher::replaceAllInDocument(QQuickTextDocument *quickDoc, const QString &query, const QString &replacement,
+                                       bool caseSensitive, bool wholeWord)
+{
+    if (!quickDoc || query.isEmpty())
+        return 0;
+    QTextDocument *doc = quickDoc->textDocument();
+    if (!doc)
+        return 0;
+
+    const QList<int> matches = findAll(doc->toPlainText(), query, caseSensitive, wholeWord);
+    if (matches.isEmpty())
+        return 0;
+
+    QTextCursor cursor(doc);
+    cursor.beginEditBlock();
+    // Back to front, so earlier offsets stay valid while we edit
+    for (int i = static_cast<int>(matches.size()) - 1; i >= 0; --i) {
+        cursor.setPosition(matches.at(i));
+        cursor.setPosition(matches.at(i) + static_cast<int>(query.length()), QTextCursor::KeepAnchor);
+        cursor.insertText(replacement);
+    }
+    cursor.endEditBlock();
+    return static_cast<int>(matches.size());
+}
+
+void TextSearcher::replaceRange(QQuickTextDocument *quickDoc, int start, int length, const QString &replacement)
+{
+    if (!quickDoc || start < 0 || length < 0)
+        return;
+    QTextDocument *doc = quickDoc->textDocument();
+    if (!doc || start + length > doc->characterCount() - 1)   // characterCount includes the final separator
+        return;
+
+    QTextCursor cursor(doc);
+    cursor.beginEditBlock();
+    cursor.setPosition(start);
+    cursor.setPosition(start + length, QTextCursor::KeepAnchor);
+    cursor.insertText(replacement);
+    cursor.endEditBlock();
 }

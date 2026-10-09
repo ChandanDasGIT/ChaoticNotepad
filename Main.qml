@@ -18,7 +18,7 @@ ApplicationWindow {
     property bool isSyncingEditor: false
     property bool isClosingWindow: false
     property int tabPendingClose: -1
-    property string fileModifiedOnDisk: ""
+    //property string fileModifiedOnDisk: ""
 
     property string errorText: ""
 
@@ -139,8 +139,27 @@ ApplicationWindow {
         customFileDialog.openPicker(true);
     }
 
+    // Index of the tab already showing this file, or -1
+    function findTabByPath(path) {
+        var wanted = FileIO.canonicalPath(path);
+        for (var i = 0; i < tabs.model.count; ++i) {
+            var fp = tabs.model.get(i).filePath;
+            if (fp !== "" && FileIO.canonicalPath(fp) === wanted)
+                return i;
+        }
+        return -1;
+    }
+
     function openFilePath(fullPath) {
         var cleanPath = FileIO.toLocalPath(fullPath.toString());
+
+        var existingTab = appWindow.findTabByPath(cleanPath);
+        if (existingTab !== -1) {
+            if (existingTab !== tabs.currentIndex)
+                tabs.selectTab(existingTab, codeEditor.realText());
+            return true;
+        }
+
         var slash = cleanPath.lastIndexOf("/");
         var fileName = slash !== -1 ? cleanPath.substring(slash + 1) : cleanPath;
         var readResult = FileIO.readFileResult(cleanPath);
@@ -193,9 +212,9 @@ ApplicationWindow {
     Connections {
         target: FileIO
         function onExternalFileModified(filePath) {
-            if (tabs.currentTab && tabs.currentTab.filePath === filePath) {
-                appWindow.fileModifiedOnDisk = filePath;
-                reloadBanner.visible = true;
+            for (var i = 0; i < tabs.model.count; ++i) {
+                if (tabs.model.get(i).filePath === filePath)
+                    tabs.setExternallyModified(i, true);
             }
         }
     }
@@ -279,7 +298,6 @@ ApplicationWindow {
             tabsModel: tabs.model
             currentTabIndex: tabs.currentIndex
             onTabSelected: function(index) {
-                reloadBanner.visible = false;
                 tabs.selectTab(index, codeEditor.realText());
             }
             onCloseRequested: function(index) {
@@ -321,7 +339,7 @@ ApplicationWindow {
                 height: 38
                 radius: 6
                 z: 20
-                visible: false
+                visible: !!(tabs.currentTab && tabs.currentTab.externallyModified)
                 color: appPalette.isDark ? "#2d333b" : "#fff8c5"
                 border.color: appPalette.isDark ? "#444c56" : "#d4a72c"
                 border.width: 1
@@ -372,7 +390,7 @@ ApplicationWindow {
                                 codeEditor.originalContent = diskText;
                                 tabs.markSaved(null, null, diskText, true);
                             }
-                            reloadBanner.visible = false;
+                            //reloadBanner.visible = false;
                         }
                     }
 
@@ -393,7 +411,7 @@ ApplicationWindow {
                             border.color: appPalette.border
                             border.width: 1
                         }
-                        onClicked: reloadBanner.visible = false
+                        onClicked: tabs.setExternallyModified(tabs.currentIndex, false)
                     }
                 }
             }
@@ -549,7 +567,7 @@ ApplicationWindow {
             // performSave()/markSaved() always work on the active tab, so
             // bring the tab being closed to the front first
             if (target !== tabs.currentIndex) {
-                reloadBanner.visible = false;
+                //reloadBanner.visible = false;
                 tabs.selectTab(target, codeEditor.realText());
             }
 

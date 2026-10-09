@@ -5,6 +5,7 @@ QtObject {
 
     required property var editor
     property var multi: null
+    property string commentToken: "//"
 
     // Start index of the line containing position p. The old
     // lastIndexOf("\n", p - 1) is wrong at p === 0: a negative fromIndex is
@@ -12,6 +13,10 @@ QtObject {
     function lineStartOf(doc, p) {
         if (p <= 0) return 0;
         return doc.lastIndexOf("\n", p - 1) + 1;
+    }
+
+    function isWordCh(c) {
+        return c !== "" && (/[A-Za-z0-9_]/.test(c) || c.charCodeAt(0) > 127);
     }
 
     function handleMultiCursorKey(event) {
@@ -181,29 +186,69 @@ QtObject {
             return;
         }
 
-        // 3. Ctrl + / (Comment / Uncomment)
+        // 3. Ctrl + / (Comment / Uncomment) for one line or every line of a selection
         if (event.modifiers === Qt.ControlModifier && event.key === Qt.Key_Slash) {
-            var cStartIdx = lineStartOf(doc, pos);
-            var cLineEnd = doc.indexOf("\n", pos);
-            var cEndIdx = (cLineEnd === -1) ? doc.length : cLineEnd;
-            var currentLine = doc.substring(cStartIdx, cEndIdx);
-
-            var commentMatch = currentLine.match(/^(\s*)(\/\/ ?)/);
-            if (commentMatch) {
-                var stripped = currentLine.replace(/^(\s*)\/\/ ?/, "$1");
-                editor.remove(cStartIdx, cEndIdx);
-                editor.insert(cStartIdx, stripped);
-                editor.cursorPosition = Math.max(cStartIdx, pos - commentMatch[2].length);
-            } else {
-                var indentMatch = currentLine.match(/^(\s*)/);
-                var ws = indentMatch ? indentMatch[1] : "";
-                var rest = currentLine.substring(ws.length);
-                var commented = ws + "// " + rest;
-                editor.remove(cStartIdx, cEndIdx);
-                editor.insert(cStartIdx, commented);
-                editor.cursorPosition = pos + 3;
-            }
             event.accepted = true;
+            var tok = root.commentToken;
+            if (tok === "") return;
+
+            var hasCSel = editor.selectionStart !== editor.selectionEnd;
+            var cFrom = hasCSel ? editor.selectionStart : pos;
+            var cTo = hasCSel ? editor.selectionEnd : pos;
+            // A selection that ends right at the start of a line doesn't include that line
+            if (hasCSel && doc.charAt(cTo - 1) === "\n") cTo -= 1;
+
+            var cStartIdx = lineStartOf(doc, cFrom);
+            var cLineEnd = doc.indexOf("\n", cTo);
+            var cEndIdx = (cLineEnd === -1) ? doc.length : cLineEnd;
+            var cLines = doc.substring(cStartIdx, cEndIdx).split("\n");
+
+            var tokRe = tok.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
+            var commentedRe = new RegExp("^(\\s*)" + tokRe + " ?");
+
+            // Blank lines are skipped, unless every line is blank
+            var targets = [];
+            for (var ci = 0; ci < cLines.length; ci++)
+                if (cLines[ci].trim() !== "") targets.push(ci);
+            if (targets.length === 0)
+                for (ci = 0; ci < cLines.length; ci++) targets.push(ci);
+
+            var allCommented = true;
+            for (var ti = 0; ti < targets.length; ti++) {
+                if (!commentedRe.test(cLines[targets[ti]])) { allCommented = false; break; }
+            }
+
+            var firstIndent = cLines[0].match(/^\s*/)[0].length;
+            var minIndent = 0;
+            if (allCommented) {
+                for (ti = 0; ti < targets.length; ti++)
+                    cLines[targets[ti]] = cLines[targets[ti]].replace(commentedRe, "$1");
+            } else {
+                minIndent = cLines[targets[0]].match(/^\s*/)[0].length;
+                for (ti = 1; ti < targets.length; ti++)
+                    minIndent = Math.min(minIndent, cLines[targets[ti]].match(/^\s*/)[0].length);
+                for (ti = 0; ti < targets.length; ti++) {
+                    var tl = cLines[targets[ti]];
+                    cLines[targets[ti]] = tl.substring(0, minIndent) + tok + " " + tl.substring(minIndent);
+                }
+            }
+
+            var newChunkC = cLines.join("\n");
+            var cDelta = newChunkC.length - (cEndIdx - cStartIdx);
+            editor.remove(cStartIdx, cEndIdx);
+            editor.insert(cStartIdx, newChunkC);
+
+            if (hasCSel) {
+                editor.select(cStartIdx, cStartIdx + newChunkC.length);   // whole block, so Ctrl+/ again toggles it back
+            } else {
+                var colNow = pos - cStartIdx;
+                var newCol;
+                if (allCommented)
+                    newCol = (colNow <= firstIndent) ? colNow : Math.max(firstIndent, colNow + cDelta);
+                else
+                    newCol = (colNow >= minIndent) ? colNow + cDelta : colNow;
+                editor.cursorPosition = cStartIdx + newCol;
+            }
             return;
         }
 
@@ -229,6 +274,14 @@ QtObject {
 
         // 5. Smart Indent on Enter
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            // Enter over a selection replaces it: remove the selection first
+            if (editor.selectionStart !== editor.selectionEnd) {
+                var delFrom = editor.selectionStart;
+                editor.remove(delFrom, editor.selectionEnd);
+                editor.cursorPosition = delFrom;
+                pos = delFrom;
+                doc = editor.text;
+            }
             var charBefore = (pos > 0) ? doc.charAt(pos - 1) : "";
             var charAfter = (pos < doc.length) ? doc.charAt(pos) : "";
 
@@ -255,16 +308,8 @@ QtObject {
             }
         }
 
-        // 6a. Skip over an already-present closing bracket / quote
-        var closers = ")]}\"'";
-        if (event.text.length === 1 && closers.indexOf(event.text) !== -1
-            && pos < doc.length && doc.charAt(pos) === event.text) {
-            editor.cursorPosition = pos + 1;
-            event.accepted = true;
-            return;
-        }
-
-        // 6b. Bracket / Quote Auto-closing
+        // 6. Brackets and quotes
+        var typed = event.text;
         var pairs = {
             "(": ")",
             "{": "}",
@@ -272,14 +317,40 @@ QtObject {
             "\"": "\"",
             "'": "'"
         };
+        var hasSel = editor.selectionStart !== editor.selectionEnd;
 
-        if (pairs[event.text] !== undefined) {
-            var openChar = event.text;
-            var closeChar = pairs[openChar];
-            editor.insert(pos, openChar + closeChar);
-            editor.cursorPosition = pos + 1;
+        // 6a. Typing an opener over a selection wraps the selection
+        if (hasSel && typed.length === 1 && pairs[typed] !== undefined) {
+            var wrapFrom = editor.selectionStart;
+            var wrapTo = editor.selectionEnd;
+            editor.insert(wrapTo, pairs[typed]);
+            editor.insert(wrapFrom, typed);
+            editor.select(wrapFrom + 1, wrapTo + 1);
             event.accepted = true;
             return;
         }
-    }
-}
+
+        // 6b. Skip over an already-present closing bracket / quote
+        var closers = ")]}\"'";
+        if (!hasSel && typed.length === 1 && closers.indexOf(typed) !== -1
+            && pos < doc.length && doc.charAt(pos) === typed) {
+            editor.cursorPosition = pos + 1;
+        event.accepted = true;
+        return;
+            }
+
+            // 6c. Auto-close
+            if (!hasSel && typed.length === 1 && pairs[typed] !== undefined) {
+                if (typed === "\"" || typed === "'") {
+                    var prevCh = (pos > 0) ? doc.charAt(pos - 1) : "";
+                    var nextCh = (pos < doc.length) ? doc.charAt(pos) : "";
+                    if (isWordCh(prevCh) || isWordCh(nextCh))
+                        return;     // don't, it's, 5' ... let TextEdit type just the one character
+                }
+                editor.insert(pos, typed + pairs[typed]);
+                editor.cursorPosition = pos + 1;
+                event.accepted = true;
+                return;
+                }
+            }
+        }

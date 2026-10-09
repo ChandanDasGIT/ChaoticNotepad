@@ -128,6 +128,13 @@ public:
         return urlOrPath;
     }
 
+    // Resolves symlinks and "..", so two spellings of one file compare equal.
+    // Falls back to the given path if the file doesn't exist.
+    Q_INVOKABLE QString canonicalPath(const QString &path) const {
+        const QString c = QFileInfo(path).canonicalFilePath();
+        return c.isEmpty() ? path : c;
+    }
+
     Q_INVOKABLE QUrl toFileUrl(const QString &localPath) const {
         return QUrl::fromLocalFile(localPath);
     }

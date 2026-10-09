@@ -50,6 +50,44 @@ Item {
         editorFlickable.contentY = Math.max(0, Math.min(maxY, target));
     }
 
+    // Line-comment token by file type; "" = no line comments for this type
+    function commentTokenFor(path) {
+        var p = path.toLowerCase();
+        var name = p.substring(p.lastIndexOf("/") + 1);
+        if (name === "cmakelists.txt" || name === "makefile" || name === "dockerfile")
+            return "#";
+        var dot = name.lastIndexOf(".");
+        var ext = dot >= 0 ? name.substring(dot + 1) : "";
+        switch (ext) {
+            case "py": case "sh": case "bash": case "zsh": case "fish": case "rb":
+            case "pl": case "r": case "yml": case "yaml": case "toml": case "conf":
+            case "cmake": case "mk": case "gitignore":
+                return "#";
+            case "lua": case "sql": case "hs":
+                return "--";
+            case "ini":
+                return ";";
+            case "txt": case "md": case "log": case "html": case "htm": case "xml": case "css": case "json":
+                return "";
+            default:
+                return "//";
+        }
+    }
+
+    // Scroll the minimum needed to keep the caret on screen
+    function followCaret() {
+        var r = editor.cursorRectangle;
+        var p = editor.mapToItem(editorFlickable.contentItem, r.x, r.y);
+        var h = r.height > 0 ? r.height : editor.font.pixelSize + 4;
+        var margin = editor.font.pixelSize * 1.5;
+        var maxY = Math.max(0, editorFlickable.contentHeight - editorFlickable.height);
+
+        if (p.y + h > editorFlickable.contentY + editorFlickable.height - margin)
+            editorFlickable.contentY = Math.min(maxY, p.y + h - editorFlickable.height + margin);
+        else if (p.y < editorFlickable.contentY + margin)
+            editorFlickable.contentY = Math.max(0, p.y - margin);
+    }
+
     Minimap {
         id: minimap
         anchors.top: parent.top
@@ -105,6 +143,10 @@ Item {
                 Qt.callLater(function() {
                     editor.cursorVisible = true;
                 });
+            }
+            function onCursorRectangleChanged() {
+                if (editor.activeFocus)
+                    Qt.callLater(root.followCaret);
             }
         }
 
@@ -210,6 +252,7 @@ Item {
                         id: keyHandler
                         editor: editor
                         multi: multiCaret
+                        commentToken: root.commentTokenFor(root.currentFilePath)
                     }
 
                     Component.onCompleted: {

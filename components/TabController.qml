@@ -44,7 +44,8 @@ Item {
         tabListModel.append({
             title: t,
             filePath: fp,
-            isDirty: false
+            isDirty: false,
+            externallyModified: false
         });
 
         var newIdx = tabListModel.count - 1;
@@ -116,6 +117,7 @@ Item {
         tabBuffers[currentIndex] = content;
         if (resetOriginal === true) tabOriginalBuffers[currentIndex] = content;
         tabListModel.setProperty(currentIndex, "isDirty", false);
+        tabListModel.setProperty(currentIndex, "externallyModified", false);
     }
 
     function markCurrentDirty(editorText) {
@@ -126,6 +128,12 @@ Item {
         if (tabListModel.get(currentIndex).isDirty !== dirty) {
             tabListModel.setProperty(currentIndex, "isDirty", dirty);
         }
+    }
+
+    function setExternallyModified(index, value) {
+        if (index < 0 || index >= tabListModel.count) return;
+        if (tabListModel.get(index).externallyModified !== value)
+            tabListModel.setProperty(index, "externallyModified", value);
     }
 
     function hasUnsavedChanges() {
