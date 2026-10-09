@@ -70,13 +70,21 @@ Rectangle {
 
                 Text {
                     id: tabTitleText
-                    text: tabItem.title + (tabItem.isDirty ? " •" : "")
+                    text: tabItem.title
                     color: root.currentTabIndex === tabItem.index ? root.appPalette.textMain : root.appPalette.textMuted
                     font.family: "Monospace"
                     font.pixelSize: 12
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                     verticalAlignment: Text.AlignVCenter
+                }
+
+                Text {
+                    visible: tabItem.isDirty
+                    text: "•"
+                    color: root.currentTabIndex === tabItem.index ? root.appPalette.textMain : root.appPalette.textMuted
+                    font.pixelSize: 12
+                    Layout.alignment: Qt.AlignVCenter
                 }
 
                 Text {

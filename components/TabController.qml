@@ -10,62 +10,41 @@ Item {
     property int currentIndex: 0
     property alias model: tabListModel
 
-    // Internal text buffers separated from the UI ListModel
-    property var tabBuffers: []
-    property var tabSavedBuffers: []
-    property var tabOriginalBuffers: []
-
     readonly property var currentTab: (tabListModel.count > 0 && currentIndex >= 0 && currentIndex < tabListModel.count)
     ? tabListModel.get(currentIndex)
     : null
 
-    signal editorTextRequested(string content)
     signal closeBlockedForUnsaved(int index, string title)
-    signal aboutToSwitch()
 
+    // Roles: title, filePath, isDirty, externallyModified,
+    //        savedText (what is on disk / last saved), originalText (baseline for the gutter diff).
+    // The live text of each tab lives in that tab's own editor.
     ListModel {
         id: tabListModel
     }
 
-    function stashCurrentText(text) {
-        if (currentIndex >= 0 && currentIndex < tabListModel.count && currentIndex < tabBuffers.length)
-            tabBuffers[currentIndex] = text;
-    }
     function createTab(title, filePath, content) {
-        tabController.aboutToSwitch();  
         var t = (title !== undefined && title !== null && title !== "") ? title : "untitled";
         var fp = (filePath !== undefined && filePath !== null) ? filePath : "";
         var c = (content !== undefined && content !== null) ? content : "";
-
-        tabBuffers.push(c);
-        tabSavedBuffers.push(c);
-        tabOriginalBuffers.push(c);
 
         tabListModel.append({
             title: t,
             filePath: fp,
             isDirty: false,
-            externallyModified: false
+            externallyModified: false,
+            savedText: c,
+            originalText: c
         });
 
-        var newIdx = tabListModel.count - 1;
-        currentIndex = newIdx;
-        tabController.editorTextRequested(c);
-        return newIdx;
+        currentIndex = tabListModel.count - 1;
+        return currentIndex;
     }
 
-    function selectTab(newIndex, currentEditorText) {
+    // The second argument is ignored; old callers still pass the editor text
+    function selectTab(newIndex) {
         if (newIndex < 0 || newIndex >= tabListModel.count || newIndex === currentIndex) return;
-
-        // Save current active tab text to memory buffer before switching
-        if (currentIndex >= 0 && currentIndex < tabBuffers.length && currentEditorText !== undefined && currentEditorText !== null) {
-            tabBuffers[currentIndex] = currentEditorText;
-        }
-
-        tabController.aboutToSwitch();
         currentIndex = newIndex;
-        var targetContent = (newIndex < tabBuffers.length) ? tabBuffers[newIndex] : "";
-        tabController.editorTextRequested(targetContent);
     }
 
     function requestCloseTab(index) {
@@ -80,19 +59,14 @@ Item {
 
     function closeTab(index) {
         if (index < 0 || index >= tabListModel.count) return;
-        if (index === currentIndex) tabController.aboutToSwitch();
 
         var tab = tabListModel.get(index);
         if (tab && tab.filePath !== "") {
             FileIO.unwatchFile(tab.filePath);
         }
 
-        tabBuffers.splice(index, 1);
-        tabSavedBuffers.splice(index, 1);
-        tabOriginalBuffers.splice(index, 1);
-
         var wasCurrent = (index === currentIndex);
-        tabListModel.remove(index);
+        tabListModel.remove(index);   // destroys that tab's editor, and its undo history with it
 
         if (tabListModel.count === 0) {
             createTab();
@@ -100,10 +74,7 @@ Item {
         }
 
         if (wasCurrent) {
-            var nextIndex = Math.min(index, tabListModel.count - 1);
-            currentIndex = nextIndex;
-            var contentToLoad = (nextIndex < tabBuffers.length) ? tabBuffers[nextIndex] : "";
-            tabController.editorTextRequested(contentToLoad);
+            currentIndex = Math.min(index, tabListModel.count - 1);
         } else if (index < currentIndex) {
             currentIndex--;
         }
@@ -113,21 +84,23 @@ Item {
         if (currentIndex < 0 || currentIndex >= tabListModel.count) return;
         if (filePath !== null && filePath !== undefined) tabListModel.setProperty(currentIndex, "filePath", filePath);
         if (fileName !== null && fileName !== undefined) tabListModel.setProperty(currentIndex, "title", fileName);
-        tabSavedBuffers[currentIndex] = content;
-        tabBuffers[currentIndex] = content;
-        if (resetOriginal === true) tabOriginalBuffers[currentIndex] = content;
+        tabListModel.setProperty(currentIndex, "savedText", content);
+        if (resetOriginal === true) tabListModel.setProperty(currentIndex, "originalText", content);
         tabListModel.setProperty(currentIndex, "isDirty", false);
         tabListModel.setProperty(currentIndex, "externallyModified", false);
     }
 
-    function markCurrentDirty(editorText) {
-        if (currentIndex < 0 || currentIndex >= tabListModel.count) return;
-        tabBuffers[currentIndex] = editorText;
-        var saved = (currentIndex < tabSavedBuffers.length) ? tabSavedBuffers[currentIndex] : "";
-        var dirty = (saved !== editorText);
-        if (tabListModel.get(currentIndex).isDirty !== dirty) {
-            tabListModel.setProperty(currentIndex, "isDirty", dirty);
+    function markDirtyAt(index, editorText) {
+        if (index < 0 || index >= tabListModel.count) return;
+        var tab = tabListModel.get(index);
+        var dirty = (tab.savedText !== editorText);
+        if (tab.isDirty !== dirty) {
+            tabListModel.setProperty(index, "isDirty", dirty);
         }
+    }
+
+    function markCurrentDirty(editorText) {
+        markDirtyAt(currentIndex, editorText);
     }
 
     function setExternallyModified(index, value) {
@@ -144,17 +117,11 @@ Item {
     }
 
     function getCurrentSavedContent() {
-        if (currentIndex >= 0 && currentIndex < tabSavedBuffers.length) {
-            return tabSavedBuffers[currentIndex];
-        }
-        return "";
+        return currentTab ? currentTab.savedText : "";
     }
 
     function getCurrentOriginalContent() {
-        if (currentIndex >= 0 && currentIndex < tabOriginalBuffers.length) {
-            return tabOriginalBuffers[currentIndex];
-        }
-        return "";
+        return currentTab ? currentTab.originalText : "";
     }
 
     Component.onCompleted: {

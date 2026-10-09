@@ -93,7 +93,7 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        width: 100
+        width: 70
         z: 20
         editorFlickable: editorFlickable
         editorTextEdit: editor

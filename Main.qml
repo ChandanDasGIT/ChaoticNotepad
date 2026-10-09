@@ -16,6 +16,28 @@ ApplicationWindow {
     color: appPalette.editorBg
 
     property bool isSyncingEditor: false
+    // The editor of the current tab. Every tab owns its own CodeEditor,
+    // so undo history, caret and scroll are per tab.
+    property var codeEditor: null
+    // Lets delegates reach the palette without the name resolving to their own property
+    property alias themePalette: appPalette
+
+    function syncCurrentEditor() {
+        var ed = editorRepeater.itemAt(tabs.currentIndex);
+        if (ed === appWindow.codeEditor) return;
+        appWindow.codeEditor = ed;
+        if (ed) {
+            Qt.callLater(function() {
+                if (appWindow.codeEditor === ed) ed.textEdit.forceActiveFocus();
+            });
+        }
+    }
+
+    // The find bar's matches belonged to the previous tab's text
+    onCodeEditorChanged: Qt.callLater(function() {
+        if (findBar.visible) findBar.refreshMatches();
+    })
+
     property bool isClosingWindow: false
     property int tabPendingClose: -1
     //property string fileModifiedOnDisk: ""
@@ -79,6 +101,8 @@ ApplicationWindow {
     }
 
     function performSave(targetPath, shouldCloseAfter) {
+        if (!codeEditor) return false;
+
         var raw = codeEditor.realText();
         var textToSave = (!raw || raw.length === 0) ? "" : (raw.endsWith("\n") ? raw : raw + "\n");
 
@@ -91,7 +115,7 @@ ApplicationWindow {
                 codeEditor.textEdit.insert(codeEditor.textEdit.length, "\n");
                 codeEditor.textEdit.cursorPosition = savedCursor;
             }
-            codeEditor.diskContent = textToSave;
+            //codeEditor.diskContent = textToSave;
             Qt.callLater(function() { appWindow.isSyncingEditor = false; });
 
             var slash = targetPath.lastIndexOf("/");
@@ -155,8 +179,7 @@ ApplicationWindow {
 
         var existingTab = appWindow.findTabByPath(cleanPath);
         if (existingTab !== -1) {
-            if (existingTab !== tabs.currentIndex)
-                tabs.selectTab(existingTab, codeEditor.realText());
+            tabs.selectTab(existingTab);
             return true;
         }
 
@@ -169,17 +192,14 @@ ApplicationWindow {
         }
         var fileText = readResult.text;
 
-        if (tabs.currentTab && tabs.currentTab.filePath === "" && !tabs.currentTab.isDirty && codeEditor.text === "") {
-            appWindow.isSyncingEditor = true;
-            codeEditor.text = fileText;
-            codeEditor.diskContent = fileText;
-            Qt.callLater(function() { appWindow.isSyncingEditor = false; });
-            codeEditor.originalContent = fileText;
-            tabs.markSaved(cleanPath, fileName, fileText, true);
-        } else {
-            tabs.createTab(fileName, cleanPath, fileText);
-            codeEditor.diskContent = fileText;
-        }
+        // A pristine, empty "untitled" tab is replaced by the opened file
+        var t = tabs.currentTab;
+        var blankIndex = (t && t.filePath === "" && !t.isDirty && t.savedText === "") ? tabs.currentIndex : -1;
+
+        tabs.createTab(fileName, cleanPath, fileText);
+        if (blankIndex !== -1)
+            tabs.closeTab(blankIndex);
+
         saveSessionState();
         return true;
     }
@@ -219,6 +239,11 @@ ApplicationWindow {
         }
     }
 
+    Connections {
+        target: tabs
+        function onCurrentIndexChanged() { appWindow.syncCurrentEditor(); }
+    }
+
     // Keyboard Shortcuts
     Shortcut { sequence: "Ctrl+="; onActivated: appWindow.adjustZoom(1) }
     Shortcut { sequence: "Ctrl++"; onActivated: appWindow.adjustZoom(1) }
@@ -228,28 +253,13 @@ ApplicationWindow {
     //Shortcut { sequence: "Ctrl+H"; onActivated: findBar.show(true) }
     Shortcut { sequence: "Ctrl+S"; onActivated: appWindow.saveActiveFile() }
     Shortcut { sequence: "Ctrl+Shift+S"; onActivated: appWindow.saveActiveFileAs() }
-    Shortcut { sequence: "Ctrl+Z"; onActivated: codeEditor.textEdit.undo() }
-    Shortcut { sequence: "Ctrl+Y"; onActivated: codeEditor.textEdit.redo() }
-    Shortcut { sequence: "Ctrl+Shift+Z"; onActivated: codeEditor.textEdit.redo() }
+    Shortcut { sequence: "Ctrl+Z"; onActivated: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.undo(); } }
+    Shortcut { sequence: "Ctrl+Y"; onActivated: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.redo(); } }
+    Shortcut { sequence: "Ctrl+Shift+Z"; onActivated: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.redo(); } }
 
     TabController {
         id: tabs
-        onEditorTextRequested: function(content) {
-            appWindow.isSyncingEditor = true;
-            codeEditor.text = content;
-            codeEditor.diskContent = (tabs.currentTab && tabs.currentTab.filePath !== "") ? tabs.getCurrentSavedContent() : "";
 
-            codeEditor.originalContent = tabs.getCurrentOriginalContent();
-
-            Qt.callLater(function() {
-                appWindow.isSyncingEditor = false;
-            });
-            codeEditor.textEdit.forceActiveFocus();
-        }
-                onAboutToSwitch: {
-            appWindow.isSyncingEditor = true;
-            tabs.stashCurrentText(codeEditor.realText());
-        }
         onCloseBlockedForUnsaved: function(index, title) {
             appWindow.tabPendingClose = index;
             unsavedPrompt.targetIndex = index;
@@ -298,7 +308,7 @@ ApplicationWindow {
             tabsModel: tabs.model
             currentTabIndex: tabs.currentIndex
             onTabSelected: function(index) {
-                tabs.selectTab(index, codeEditor.realText());
+                tabs.selectTab(index);
             }
             onCloseRequested: function(index) {
                 tabs.requestCloseTab(index);
@@ -312,22 +322,45 @@ ApplicationWindow {
             Layout.fillHeight: true
             clip: true
 
-            CodeEditor {
-                id: codeEditor
-                anchors.fill: parent
-                appPalette: appPalette
-                editorFontSize: settingsDialog.fontSize
-                editorFontFamily: settingsDialog.fontFamily
-                currentFilePath: tabs.currentTab ? tabs.currentTab.filePath : ""
-                onTextModified: {
-                    if (!appWindow.isSyncingEditor) {
-                        tabs.markCurrentDirty(codeEditor.realText());
-                        if (findBar.visible) {
-                            findBar.refreshMatches();
-                        }
-                    }
+            Repeater {
+                id: editorRepeater
+                model: tabs.model
+                onItemAdded: appWindow.syncCurrentEditor()
+                onItemRemoved: {
+                    appWindow.syncCurrentEditor();
+                    Qt.callLater(appWindow.syncCurrentEditor);
                 }
-                onZoomRequested: (delta) => appWindow.adjustZoom(delta)
+
+                delegate: CodeEditor {
+                    required property int index
+                    required property string filePath
+                    required property string savedText
+                    required property string originalText
+
+                    property bool ready: false
+
+                    anchors.fill: parent
+                    visible: index === tabs.currentIndex
+                    appPalette: appWindow.themePalette
+                    editorFontSize: settingsDialog.fontSize
+                    editorFontFamily: settingsDialog.fontFamily
+                    currentFilePath: filePath
+                    diskContent: filePath !== "" ? savedText : ""
+                    originalContent: originalText
+
+                    Component.onCompleted: {
+                        text = savedText;   // the initial load isn't an edit
+                        ready = true;
+                    }
+
+                    onTextModified: {
+                        if (!ready || appWindow.isSyncingEditor) return;
+                        tabs.markDirtyAt(index, realText());
+                        if (findBar.visible && index === tabs.currentIndex)
+                            findBar.refreshMatches();
+                    }
+                    onZoomRequested: (delta) => appWindow.adjustZoom(delta)
+                }
             }
 
             Rectangle {
@@ -385,9 +418,8 @@ ApplicationWindow {
                                 var diskText = reloadResult.text;
                                 appWindow.isSyncingEditor = true;
                                 codeEditor.text = diskText;
-                                codeEditor.diskContent = diskText;
+                                //codeEditor.diskContent = diskText;
                                 Qt.callLater(function() { appWindow.isSyncingEditor = false; });
-                                codeEditor.originalContent = diskText;
                                 tabs.markSaved(null, null, diskText, true);
                             }
                             //reloadBanner.visible = false;
@@ -481,11 +513,14 @@ ApplicationWindow {
                 visible: false
                 z: 10
                 appPalette: appPalette
-                targetEditor: codeEditor.textEdit
+
+                targetEditor: appWindow.codeEditor ? appWindow.codeEditor.textEdit : null
 
                 onMatchSelected: function(position) {
                     // Deferred so the editor has finished laying out any text change
-                    Qt.callLater(function() { codeEditor.ensureVisible(position); });
+                    Qt.callLater(function() {
+                        if (appWindow.codeEditor) appWindow.codeEditor.ensureVisible(position);
+                    });
                 }
             }
         }
@@ -493,14 +528,14 @@ ApplicationWindow {
         BottomToolbar {
             Layout.fillWidth: true
             appPalette: appPalette
-            canUndo: codeEditor.textEdit.canUndo
-            canRedo: codeEditor.textEdit.canRedo
+            canUndo: appWindow.codeEditor ? appWindow.codeEditor.textEdit.canUndo : false
+            canRedo: appWindow.codeEditor ? appWindow.codeEditor.textEdit.canRedo : false
             onNewFileClicked: tabs.createTab()
             onOpenFolderClicked: customFileDialog.openPicker(false)
             onSaveClicked: appWindow.saveActiveFile()
             onSaveAsClicked: appWindow.saveActiveFileAs()
-            onUndoClicked: codeEditor.textEdit.undo()
-            onRedoClicked: codeEditor.textEdit.redo()
+            onUndoClicked: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.undo(); }
+            onRedoClicked: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.redo(); }
             onSearchClicked: findBar.show(false)
             onSettingsClicked: settingsDialog.open()
         }
@@ -568,7 +603,7 @@ ApplicationWindow {
             // bring the tab being closed to the front first
             if (target !== tabs.currentIndex) {
                 //reloadBanner.visible = false;
-                tabs.selectTab(target, codeEditor.realText());
+                tabs.selectTab(target);
             }
 
             var tab = tabs.model.get(target);

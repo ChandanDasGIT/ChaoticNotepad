@@ -46,6 +46,8 @@ qt_add_qml_module(appNotepadQtQuick
         functions/linediff/linediffer.cpp
         functions/multicursor/multicursor.h
         functions/multicursor/multicursor.cpp
+        functions/minimapview/minimapview.h
+        functions/minimapview/minimapview.cpp
 )
 
 target_include_directories(appNotepadQtQuick PRIVATE
@@ -54,6 +56,7 @@ target_include_directories(appNotepadQtQuick PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/functions/highlighter
     ${CMAKE_CURRENT_SOURCE_DIR}/functions/linediff
     ${CMAKE_CURRENT_SOURCE_DIR}/functions/multicursor
+    ${CMAKE_CURRENT_SOURCE_DIR}/functions/minimapview
 )
 
 target_link_libraries(appNotepadQtQuick PRIVATE

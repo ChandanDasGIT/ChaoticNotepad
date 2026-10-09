@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import NotepadQtQuick
 
 Item {
     id: minimapRoot
@@ -25,49 +26,21 @@ Item {
         }
     }
 
-    // Dynamic scale factor to fit the entire document into minimapRoot.height
-    readonly property real fittedScale: {
-        var unscaledH = microText.implicitHeight;
-        if (unscaledH <= 0 || minimapRoot.height <= 0) return 1.0;
-        // Never upscale short files; scale down only when text exceeds height
-        return Math.min(1.0, minimapRoot.height / unscaledH);
-    }
+    // The document, painted as colored blocks (C++)
+    MinimapView {
+        id: view
+        anchors.fill: parent
+        document: minimapRoot.editorTextEdit.textDocument
+        textColor: minimapRoot.appPalette ? minimapRoot.appPalette.textMain : "#abb2bf"
 
-    // Document container pinned to the minimap bounds (no internal scrolling)
-    Item {
-        id: fullDocContainer
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: minimapRoot.height
-        clip: true
-
-        Text {
-            id: microText
-            anchors.left: parent.left
-            anchors.top: parent.top
-            anchors.leftMargin: 4
-            width: (minimapRoot.width - 6) / Math.max(0.01, minimapRoot.fittedScale)
-
-            text: editorTextEdit.text
-            textFormat: Text.PlainText
-            font.family: editorTextEdit.font.family
-            font.pixelSize: 3
-            renderType: Text.NativeRendering
-            lineHeight: 1.05
-            wrapMode: Text.NoWrap
-            color: appPalette ? appPalette.textMain : "#abb2bf"
-            opacity: 0.90
-
-            transformOrigin: Item.TopLeft
-            transform: Scale {
-                xScale: minimapRoot.fittedScale
-                yScale: minimapRoot.fittedScale
-            }
+        // Only used when the map is taller than the item (very long files)
+        scrollProgress: {
+            var maxScroll = minimapRoot.editorFlickable.contentHeight - minimapRoot.editorFlickable.height;
+            return maxScroll > 0 ? minimapRoot.editorFlickable.contentY / maxScroll : 0;
         }
     }
 
-    // Viewport Slider Box
+    // Viewport slider: the part of the document visible in the editor
     Rectangle {
         id: viewportSlider
         anchors.left: parent.left
@@ -76,62 +49,32 @@ Item {
         anchors.rightMargin: 2
         radius: 3
 
-        color: appPalette ? appPalette.highlight : "#528bff"
-        opacity: sliderDrag.pressed ? 0.35 : (sliderDrag.containsMouse ? 0.25 : 0.16)
-        border.color: appPalette ? appPalette.highlight : "#61afef"
+        color: minimapRoot.appPalette ? minimapRoot.appPalette.highlight : "#528bff"
+        opacity: mapMouse.pressed ? 0.35 : (mapMouse.containsMouse ? 0.25 : 0.16)
+        border.color: minimapRoot.appPalette ? minimapRoot.appPalette.highlight : "#61afef"
         border.width: 1
 
-        // Height corresponds directly to visible content ratio
-        height: {
-            if (editorFlickable.contentHeight <= 0) return minimapRoot.height;
-            var ratio = editorFlickable.height / editorFlickable.contentHeight;
-            if (ratio >= 1.0) {
-                var actualRenderedH = microText.implicitHeight * minimapRoot.fittedScale;
-                return Math.max(20, Math.min(minimapRoot.height, actualRenderedH + 4));
-            }
-            return Math.max(20, Math.min(minimapRoot.height, minimapRoot.height * ratio));
-        }
-
-        // Position slides smoothly from 0 to bottom
-        y: {
-            var maxScroll = editorFlickable.contentHeight - editorFlickable.height;
-            if (maxScroll <= 0) return 0;
-            var progress = Math.max(0, Math.min(1, editorFlickable.contentY / maxScroll));
-            return progress * (minimapRoot.height - height);
-        }
-
-        MouseArea {
-            id: sliderDrag
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            drag.target: parent
-            drag.axis: Drag.YAxis
-            drag.minimumY: 0
-            drag.maximumY: minimapRoot.height - viewportSlider.height
-
-            onPositionChanged: {
-                if (drag.active) {
-                    var maxRange = minimapRoot.height - viewportSlider.height;
-                    var progress = maxRange > 0 ? (viewportSlider.y / maxRange) : 0;
-                    editorFlickable.contentY = progress * (editorFlickable.contentHeight - editorFlickable.height);
-                }
-            }
-        }
+        height: Math.min(view.mapHeight, Math.max(12, editorFlickable.height * view.mapScale))
+        y: editorFlickable.contentY * view.mapScale - view.mapOffset
     }
 
-    // Click anywhere in the column to jump
+    // Click or drag anywhere to scroll the editor there
     MouseArea {
+        id: mapMouse
         anchors.fill: parent
-        z: -1
+        hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: function(mouse) {
-            var maxRange = minimapRoot.height - viewportSlider.height;
-            if (maxRange <= 0) return;
-            var targetY = mouse.y - (viewportSlider.height / 2);
-            var clampedY = Math.max(0, Math.min(maxRange, targetY));
-            var progress = clampedY / maxRange;
-            editorFlickable.contentY = progress * (editorFlickable.contentHeight - editorFlickable.height);
+
+        function scrollTo(mouseY) {
+            if (view.mapScale <= 0) return;
+            var fl = minimapRoot.editorFlickable;
+            var target = (mouseY + view.mapOffset - viewportSlider.height / 2) / view.mapScale;
+            var maxScroll = fl.contentHeight - fl.height;
+            if (maxScroll > 0)
+                fl.contentY = Math.max(0, Math.min(maxScroll, target));
         }
+
+        onPressed: function(mouse) { scrollTo(mouse.y); }
+        onPositionChanged: function(mouse) { if (pressed) scrollTo(mouse.y); }
     }
 }
