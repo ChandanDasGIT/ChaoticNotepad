@@ -48,6 +48,10 @@ qt_add_qml_module(appNotepadQtQuick
         functions/multicursor/multicursor.cpp
         functions/minimapview/minimapview.h
         functions/minimapview/minimapview.cpp
+        functions/appcontroller/appcontroller.h
+        functions/appcontroller/appcontroller.cpp
+        functions/stickyscroll/stickyscroll.h
+        functions/stickyscroll/stickyscroll.cpp
 )
 
 target_include_directories(appNotepadQtQuick PRIVATE
@@ -57,6 +61,8 @@ target_include_directories(appNotepadQtQuick PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/functions/linediff
     ${CMAKE_CURRENT_SOURCE_DIR}/functions/multicursor
     ${CMAKE_CURRENT_SOURCE_DIR}/functions/minimapview
+    ${CMAKE_CURRENT_SOURCE_DIR}/functions/appcontroller
+    ${CMAKE_CURRENT_SOURCE_DIR}/functions/stickyscroll
 )
 
 target_link_libraries(appNotepadQtQuick PRIVATE

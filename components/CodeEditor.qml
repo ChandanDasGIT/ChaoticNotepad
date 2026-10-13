@@ -17,11 +17,14 @@ Item {
     property string currentFilePath: ""
     property bool isProgrammaticChange: false
 
+    property var stickyLinesData: []
+
+    MultiCursor { id: multiCaret }
+    StickyScroll { id: stickyScroll } // New
+
     property int caretTick: 0
     property int prevCaret: 0
     property int curCaret: 0
-
-    MultiCursor { id: multiCaret }
 
     Connections {
         target: multiCaret
@@ -38,15 +41,15 @@ Item {
     function ensureVisible(pos) {
         var r = editor.positionToRectangle(pos);
         var p = editor.mapToItem(editorFlickable.contentItem, r.x, r.y);
-        var margin = 30;
-        var viewTop = editorFlickable.contentY;
-        var viewBottom = viewTop + editorFlickable.height;
 
-        if (p.y >= viewTop + margin && p.y + r.height <= viewBottom - margin)
-            return;
+        // Calculate the height of roughly 5 lines of text
+        var lineHeight = editor.font.pixelSize + 4; // Adjust based on your text line spacing
+        var lineOffset = lineHeight * 5;
+
+        // Target is the function position minus 5 lines so it lands comfortably below the sticky header
+        var target = p.y - lineOffset;
 
         var maxY = Math.max(0, editorFlickable.contentHeight - editorFlickable.height);
-        var target = p.y + r.height / 2 - editorFlickable.height / 2;
         editorFlickable.contentY = Math.max(0, Math.min(maxY, target));
     }
 
@@ -114,6 +117,25 @@ Item {
         contentHeight: Math.max(height, containerItem.height)
 
         property string wordToHighlight: ""
+
+        onContentYChanged: {
+            if (contentY <= 0) {
+                root.stickyLinesData = [];
+                return;
+            }
+            // Include leftPadding so the coordinate actually hits the text, not empty space
+            var pos = editor.positionAt(editor.leftPadding + 1, contentY + editor.topPadding + 1);
+            var rawData = stickyScroll.getStickyLinesForPosition(pos);
+
+            // Force Qt to treat this as a standard JavaScript array so the UI reacts instantly
+            var parsedData = [];
+            for (var i = 0; i < rawData.length; ++i) {
+                parsedData.push(rawData[i]);
+            }
+            root.stickyLinesData = parsedData;
+
+            console.log("STICKY DATA:", JSON.stringify(parsedData));
+        }
 
         Timer {
             id: selectionTimer
@@ -259,6 +281,7 @@ Item {
                         editorFlickable.updateHighlighter();
                         editor.forceActiveFocus();
                         multiCaret.setDocument(editor.textDocument);
+                        stickyScroll.setDocument(editor.textDocument);
                     }
 
                     MouseArea {
@@ -335,6 +358,90 @@ Item {
                     //         editorFlickable.contentY = Math.max(0, curY - 10);
                     //     }
                     // }
+                }
+            }
+
+            // Full-Width Sticky Scroll Overlay
+            Rectangle {
+                id: stickyHeaderItem
+                width: editorFlickable.width
+                // Bulletproof height: Array length * explicit row height
+                height: (root.stickyLinesData ? root.stickyLinesData.length : 0) * (root.editorFontSize + 12)
+                x: 0
+                y: editorFlickable.contentY > 0 ? editorFlickable.contentY : 0
+
+                color: root.appPalette.editorBg
+                visible: height > 0 // Only show if we physically have height
+                z: 10
+
+                // Bottom separator line
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    anchors.bottom: parent.bottom
+                    color: root.appPalette.textSelectionBg
+                    opacity: 0.8
+                    z: 1 //
+                }
+
+                Column {
+                    id: stickyCol
+                    width: parent.width
+
+                    Repeater {
+                        model: root.stickyLinesData
+
+                        delegate: Item {
+                            width: stickyCol.width
+                            height: root.editorFontSize + 12 // Explicit row height
+
+                            // NEW: Make the entire sticky line clickable
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    // Move the cursor to the start of the pinned function
+                                    editor.cursorPosition = modelData.position;
+                                    editor.forceActiveFocus();
+
+                                    // Scroll the editor up so the line is on screen
+                                    root.ensureVisible(modelData.position);
+                                }
+                            }
+
+                            // 1. The Gutter Overlay (Line Numbers)
+                            Rectangle {
+                                width: lineGutter.width
+                                height: parent.height
+                                color: root.appPalette.editorBg
+
+                                Text {
+                                    text: modelData.lineNum
+                                    color: root.appPalette.textMuted
+                                    font.family: root.editorFontFamily
+                                    font.pixelSize: root.editorFontSize
+                                    anchors.fill: parent
+                                    anchors.rightMargin: 8
+                                    horizontalAlignment: Text.AlignRight
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+
+                            // 2. The Code Overlay
+                            Text {
+                                id: stickyText
+                                x: lineGutter.width + editor.leftPadding
+                                width: parent.width - x
+                                height: parent.height
+                                verticalAlignment: Text.AlignVCenter
+                                color: root.appPalette.textMain
+                                font.family: root.editorFontFamily
+                                font.pixelSize: root.editorFontSize
+                                text: modelData.text
+                                wrapMode: Text.NoWrap
+                            }
+                        }
+                    }
                 }
             }
         }

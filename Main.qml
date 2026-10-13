@@ -15,11 +15,12 @@ ApplicationWindow {
     + " - Editor"
     color: appPalette.editorBg
 
+    AppController {
+        id: appCtrl
+    }
+
     property bool isSyncingEditor: false
-    // The editor of the current tab. Every tab owns its own CodeEditor,
-    // so undo history, caret and scroll are per tab.
     property var codeEditor: null
-    // Lets delegates reach the palette without the name resolving to their own property
     property alias themePalette: appPalette
 
     function syncCurrentEditor() {
@@ -33,46 +34,19 @@ ApplicationWindow {
         }
     }
 
-    // The find bar's matches belonged to the previous tab's text
     onCodeEditorChanged: Qt.callLater(function() {
         if (findBar.visible) findBar.refreshMatches();
     })
 
-    property bool isClosingWindow: false
-    property int tabPendingClose: -1
-    //property string fileModifiedOnDisk: ""
-
-    property string errorText: ""
-
     function showError(message) {
-        appWindow.errorText = message;
+        appCtrl.errorText = message;
         errorTimer.restart();
-    }
-
-    // Forget any half-finished "save then close" request
-    function resetPendingClose() {
-        appWindow.tabPendingClose = -1;
-        appWindow.isClosingWindow = false;
-    }
-
-    property string pendingOverwritePath: ""
-
-    function confirmOverwrite() {
-        var p = appWindow.pendingOverwritePath;
-        appWindow.pendingOverwritePath = "";
-        appWindow.performSave(p, true);
-    }
-
-    // Back to the picker so the user can choose another name
-    function cancelOverwrite() {
-        appWindow.pendingOverwritePath = "";
-        customFileDialog.openPicker(true);
     }
 
     Timer {
         id: errorTimer
         interval: 5000
-        onTriggered: appWindow.errorText = ""
+        onTriggered: appCtrl.errorText = ""
     }
 
     Settings {
@@ -103,33 +77,28 @@ ApplicationWindow {
     function performSave(targetPath, shouldCloseAfter) {
         if (!codeEditor) return false;
 
-        var raw = codeEditor.realText();
-        var textToSave = (!raw || raw.length === 0) ? "" : (raw.endsWith("\n") ? raw : raw + "\n");
+        var textToSave = appCtrl.prepareTextForSave(codeEditor.realText());
 
         if (FileIO.writeFile(targetPath, textToSave)) {
             appWindow.isSyncingEditor = true;
             if (codeEditor.realText() !== textToSave) {
-                // Only the trailing newline differs: append it instead of replacing
-                // the whole text, so the undo history survives
                 var savedCursor = codeEditor.textEdit.cursorPosition;
                 codeEditor.textEdit.insert(codeEditor.textEdit.length, "\n");
                 codeEditor.textEdit.cursorPosition = savedCursor;
             }
-            //codeEditor.diskContent = textToSave;
             Qt.callLater(function() { appWindow.isSyncingEditor = false; });
 
-            var slash = targetPath.lastIndexOf("/");
-            var fileName = slash !== -1 ? targetPath.substring(slash + 1) : targetPath;
+            var fileName = appCtrl.fileNameFromPath(targetPath);
             tabs.markSaved(targetPath, fileName, textToSave);
 
             saveSessionState();
 
-            if (shouldCloseAfter && tabPendingClose !== -1) {
-                var target = tabPendingClose;
-                tabPendingClose = -1;
+            if (shouldCloseAfter && appCtrl.tabPendingClose !== -1) {
+                var target = appCtrl.tabPendingClose;
+                appCtrl.tabPendingClose = -1;
                 tabs.closeTab(target);
 
-                if (appWindow.isClosingWindow) {
+                if (appCtrl.isClosingWindow) {
                     if (tabs.hasUnsavedChanges()) {
                         for (var i = 0; i < tabs.model.count; ++i) {
                             if (tabs.model.get(i).isDirty) {
@@ -144,18 +113,18 @@ ApplicationWindow {
             }
             return true;
         }
-        appWindow.showError("Could not save \"" + targetPath + "\". Check permissions and free space.");
-        appWindow.resetPendingClose();
+
+        showError("Could not save \"" + targetPath + "\". Check permissions and free space.");
+        appCtrl.resetPendingClose();
         return false;
     }
 
     function saveActiveFile() {
         if (!tabs.currentTab) return;
-        if (tabs.currentTab.filePath !== "") {
+        if (tabs.currentTab.filePath !== "")
             performSave(tabs.currentTab.filePath, false);
-        } else {
+        else
             customFileDialog.openPicker(true);
-        }
     }
 
     function saveActiveFileAs() {
@@ -163,40 +132,31 @@ ApplicationWindow {
         customFileDialog.openPicker(true);
     }
 
-    // Index of the tab already showing this file, or -1
-    function findTabByPath(path) {
-        var wanted = FileIO.canonicalPath(path);
-        for (var i = 0; i < tabs.model.count; ++i) {
-            var fp = tabs.model.get(i).filePath;
-            if (fp !== "" && FileIO.canonicalPath(fp) === wanted)
-                return i;
-        }
-        return -1;
-    }
-
     function openFilePath(fullPath) {
         var cleanPath = FileIO.toLocalPath(fullPath.toString());
 
-        var existingTab = appWindow.findTabByPath(cleanPath);
+        // Gather tab paths to let C++ check canonical matches
+        var paths = [];
+        for (var i = 0; i < tabs.model.count; ++i)
+            paths.push(tabs.model.get(i).filePath);
+
+        var existingTab = appCtrl.findTabByPath(paths, cleanPath);
         if (existingTab !== -1) {
             tabs.selectTab(existingTab);
             return true;
         }
 
-        var slash = cleanPath.lastIndexOf("/");
-        var fileName = slash !== -1 ? cleanPath.substring(slash + 1) : cleanPath;
         var readResult = FileIO.readFileResult(cleanPath);
         if (!readResult.ok) {
-            appWindow.showError(readResult.error);
+            showError(readResult.error);
             return false;
         }
-        var fileText = readResult.text;
 
-        // A pristine, empty "untitled" tab is replaced by the opened file
+        var fileName = appCtrl.fileNameFromPath(cleanPath);
         var t = tabs.currentTab;
         var blankIndex = (t && t.filePath === "" && !t.isDirty && t.savedText === "") ? tabs.currentIndex : -1;
 
-        tabs.createTab(fileName, cleanPath, fileText);
+        tabs.createTab(fileName, cleanPath, readResult.text);
         if (blankIndex !== -1)
             tabs.closeTab(blankIndex);
 
@@ -209,23 +169,19 @@ ApplicationWindow {
             appSettings.sessionFiles = [];
             return;
         }
-        var files = [];
-        for (var i = 0; i < tabs.model.count; ++i) {
-            var fp = tabs.model.get(i).filePath;
-            if (fp && fp.length > 0) {
-                files.push(fp);
-            }
-        }
-        appSettings.sessionFiles = files;
+        var paths = [];
+        for (var i = 0; i < tabs.model.count; ++i)
+            paths.push(tabs.model.get(i).filePath);
+
+        appSettings.sessionFiles = appCtrl.collectSessionFiles(paths);
     }
 
     function restoreSessionIfEnabled() {
         if (!settingsDialog.restoreSession) return;
         var files = appSettings.sessionFiles;
         if (files && files.length > 0) {
-            for (var i = 0; i < files.length; ++i) {
-                appWindow.openFilePath(files[i]);
-            }
+            for (var i = 0; i < files.length; ++i)
+                openFilePath(files[i]);
         }
     }
 
@@ -245,23 +201,22 @@ ApplicationWindow {
     }
 
     // Keyboard Shortcuts
-    Shortcut { sequence: "Ctrl+="; onActivated: appWindow.adjustZoom(1) }
-    Shortcut { sequence: "Ctrl++"; onActivated: appWindow.adjustZoom(1) }
-    Shortcut { sequence: "Ctrl+-"; onActivated: appWindow.adjustZoom(-1) }
+    Shortcut { sequence: "Ctrl+="; onActivated: adjustZoom(1) }
+    Shortcut { sequence: "Ctrl++"; onActivated: adjustZoom(1) }
+    Shortcut { sequence: "Ctrl+-"; onActivated: adjustZoom(-1) }
     Shortcut { sequence: "Ctrl+0"; onActivated: settingsDialog.fontSize = 13 }
     Shortcut { sequence: "Ctrl+F"; onActivated: findBar.show(false) }
-    //Shortcut { sequence: "Ctrl+H"; onActivated: findBar.show(true) }
-    Shortcut { sequence: "Ctrl+S"; onActivated: appWindow.saveActiveFile() }
-    Shortcut { sequence: "Ctrl+Shift+S"; onActivated: appWindow.saveActiveFileAs() }
-    Shortcut { sequence: "Ctrl+Z"; onActivated: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.undo(); } }
-    Shortcut { sequence: "Ctrl+Y"; onActivated: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.redo(); } }
-    Shortcut { sequence: "Ctrl+Shift+Z"; onActivated: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.redo(); } }
+    Shortcut { sequence: "Ctrl+S"; onActivated: saveActiveFile() }
+    Shortcut { sequence: "Ctrl+Shift+S"; onActivated: saveActiveFileAs() }
+    Shortcut { sequence: "Ctrl+Z"; onActivated: { if (codeEditor) codeEditor.textEdit.undo(); } }
+    Shortcut { sequence: "Ctrl+Y"; onActivated: { if (codeEditor) codeEditor.textEdit.redo(); } }
+    Shortcut { sequence: "Ctrl+Shift+Z"; onActivated: { if (codeEditor) codeEditor.textEdit.redo(); } }
 
     TabController {
         id: tabs
 
         onCloseBlockedForUnsaved: function(index, title) {
-            appWindow.tabPendingClose = index;
+            appCtrl.tabPendingClose = index;
             unsavedPrompt.targetIndex = index;
             unsavedPrompt.docTitle = title;
             unsavedPrompt.open();
@@ -278,7 +233,7 @@ ApplicationWindow {
 
         if (tabs.hasUnsavedChanges()) {
             close.accepted = false;
-            appWindow.isClosingWindow = true;
+            appCtrl.isClosingWindow = true;
             for (var i = 0; i < tabs.model.count; ++i) {
                 if (tabs.model.get(i).isDirty) {
                     tabs.requestCloseTab(i);
@@ -292,9 +247,8 @@ ApplicationWindow {
 
     Component.onCompleted: {
         restoreSessionIfEnabled();
-
         if (typeof initialFileToOpen !== "undefined" && initialFileToOpen !== "") {
-            appWindow.openFilePath(initialFileToOpen);
+            openFilePath(initialFileToOpen);
         }
     }
 
@@ -307,10 +261,8 @@ ApplicationWindow {
             appPalette: appPalette
             tabsModel: tabs.model
             currentTabIndex: tabs.currentIndex
-            onTabSelected: function(index) {
-                tabs.selectTab(index);
-            }
-            onCloseRequested: function(index) {
+            onTabSelected: (index) => tabs.selectTab(index)
+            onCloseRequested: (index) => {
                 tabs.requestCloseTab(index);
                 saveSessionState();
             }
@@ -349,7 +301,7 @@ ApplicationWindow {
                     originalContent: originalText
 
                     Component.onCompleted: {
-                        text = savedText;   // the initial load isn't an edit
+                        text = savedText;
                         ready = true;
                     }
 
@@ -359,7 +311,7 @@ ApplicationWindow {
                         if (findBar.visible && index === tabs.currentIndex)
                             findBar.refreshMatches();
                     }
-                    onZoomRequested: (delta) => appWindow.adjustZoom(delta)
+                    onZoomRequested: (delta) => adjustZoom(delta)
                 }
             }
 
@@ -412,17 +364,15 @@ ApplicationWindow {
                             if (tabs.currentTab && tabs.currentTab.filePath !== "") {
                                 var reloadResult = FileIO.readFileResult(tabs.currentTab.filePath);
                                 if (!reloadResult.ok) {
-                                    appWindow.showError(reloadResult.error);
+                                    showError(reloadResult.error);
                                     return;
                                 }
                                 var diskText = reloadResult.text;
                                 appWindow.isSyncingEditor = true;
                                 codeEditor.text = diskText;
-                                //codeEditor.diskContent = diskText;
                                 Qt.callLater(function() { appWindow.isSyncingEditor = false; });
                                 tabs.markSaved(null, null, diskText, true);
                             }
-                            //reloadBanner.visible = false;
                         }
                     }
 
@@ -457,7 +407,7 @@ ApplicationWindow {
                 height: errorLabel.implicitHeight + 20
                 radius: 6
                 z: 21
-                visible: appWindow.errorText !== ""
+                visible: appCtrl.errorText !== ""
                 color: appPalette.popupBg
                 border.color: appPalette.danger
                 border.width: 1
@@ -466,14 +416,14 @@ ApplicationWindow {
                     id: errorLabel
                     anchors.fill: parent
                     anchors.margins: 10
-                    text: appWindow.errorText
+                    text: appCtrl.errorText
                     font.pixelSize: 12
                     color: appPalette.textMain
                     wrapMode: Text.WordWrap
                     verticalAlignment: Text.AlignVCenter
                 }
 
-                TapHandler { onTapped: appWindow.errorText = "" }
+                TapHandler { onTapped: appCtrl.errorText = "" }
             }
 
             DropArea {
@@ -481,16 +431,13 @@ ApplicationWindow {
                 anchors.fill: parent
 
                 onEntered: function(drag) {
-                    if (drag.hasUrls) {
-                        drag.acceptProposedAction();
-                    }
+                    if (drag.hasUrls) drag.acceptProposedAction();
                 }
 
                 onDropped: function(drop) {
                     if (drop.hasUrls) {
-                        for (var i = 0; i < drop.urls.length; ++i) {
-                            appWindow.openFilePath(drop.urls[i]);
-                        }
+                        for (var i = 0; i < drop.urls.length; ++i)
+                            openFilePath(drop.urls[i]);
                         drop.acceptProposedAction();
                     }
                 }
@@ -514,12 +461,11 @@ ApplicationWindow {
                 z: 10
                 appPalette: appPalette
 
-                targetEditor: appWindow.codeEditor ? appWindow.codeEditor.textEdit : null
+                targetEditor: codeEditor ? codeEditor.textEdit : null
 
                 onMatchSelected: function(position) {
-                    // Deferred so the editor has finished laying out any text change
                     Qt.callLater(function() {
-                        if (appWindow.codeEditor) appWindow.codeEditor.ensureVisible(position);
+                        if (codeEditor) codeEditor.ensureVisible(position);
                     });
                 }
             }
@@ -528,14 +474,14 @@ ApplicationWindow {
         BottomToolbar {
             Layout.fillWidth: true
             appPalette: appPalette
-            canUndo: appWindow.codeEditor ? appWindow.codeEditor.textEdit.canUndo : false
-            canRedo: appWindow.codeEditor ? appWindow.codeEditor.textEdit.canRedo : false
+            canUndo: codeEditor ? codeEditor.textEdit.canUndo : false
+            canRedo: codeEditor ? codeEditor.textEdit.canRedo : false
             onNewFileClicked: tabs.createTab()
             onOpenFolderClicked: customFileDialog.openPicker(false)
-            onSaveClicked: appWindow.saveActiveFile()
-            onSaveAsClicked: appWindow.saveActiveFileAs()
-            onUndoClicked: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.undo(); }
-            onRedoClicked: { if (appWindow.codeEditor) appWindow.codeEditor.textEdit.redo(); }
+            onSaveClicked: saveActiveFile()
+            onSaveAsClicked: saveActiveFileAs()
+            onUndoClicked: { if (codeEditor) codeEditor.textEdit.undo(); }
+            onRedoClicked: { if (codeEditor) codeEditor.textEdit.redo(); }
             onSearchClicked: findBar.show(false)
             onSettingsClicked: settingsDialog.open()
         }
@@ -548,8 +494,8 @@ ApplicationWindow {
         property bool pickedFile: false
         onOpened: pickedFile = false
         onClosed: {
-            if (!pickedFile && appWindow.tabPendingClose !== -1)
-                appWindow.resetPendingClose();
+            if (!pickedFile && appCtrl.tabPendingClose !== -1)
+                appCtrl.resetPendingClose();
         }
 
         onFileConfirmed: function(fullPath, fileName, isSave) {
@@ -557,13 +503,13 @@ ApplicationWindow {
             if (isSave) {
                 var sameAsCurrent = tabs.currentTab && tabs.currentTab.filePath === fullPath;
                 if (FileIO.fileExists(fullPath) && !sameAsCurrent) {
-                    appWindow.pendingOverwritePath = fullPath;
+                    appCtrl.pendingOverwritePath = fullPath;
                     overwritePrompt.open();
                 } else {
-                    appWindow.performSave(fullPath, true);
+                    performSave(fullPath, true);
                 }
             } else {
-                appWindow.openFilePath(fullPath);
+                openFilePath(fullPath);
             }
         }
     }
@@ -571,18 +517,15 @@ ApplicationWindow {
     UnsavedPromptDialog {
         id: unsavedPrompt
         appPalette: appPalette
-        onCancelRequested: {
-            tabPendingClose = -1;
-            appWindow.isClosingWindow = false;
-        }
+        onCancelRequested: appCtrl.resetPendingClose()
         onDiscardRequested: {
-            var target = tabPendingClose;
-            tabPendingClose = -1;
+            var target = appCtrl.tabPendingClose;
+            appCtrl.tabPendingClose = -1;
             if (target < 0 || target >= tabs.model.count) return;
             tabs.closeTab(target);
             saveSessionState();
 
-            if (appWindow.isClosingWindow) {
+            if (appCtrl.isClosingWindow) {
                 if (tabs.hasUnsavedChanges()) {
                     for (var i = 0; i < tabs.model.count; ++i) {
                         if (tabs.model.get(i).isDirty) {
@@ -596,24 +539,21 @@ ApplicationWindow {
             }
         }
         onSaveRequested: {
-            var target = tabPendingClose;
+            var target = appCtrl.tabPendingClose;
             if (target < 0 || target >= tabs.model.count) return;
 
-            // performSave()/markSaved() always work on the active tab, so
-            // bring the tab being closed to the front first
-            if (target !== tabs.currentIndex) {
-                //reloadBanner.visible = false;
+            if (target !== tabs.currentIndex)
                 tabs.selectTab(target);
-            }
 
             var tab = tabs.model.get(target);
             if (tab.filePath !== "") {
-                appWindow.performSave(tab.filePath, true);
+                performSave(tab.filePath, true);
             } else {
                 customFileDialog.openPicker(true);
             }
         }
     }
+
     Popup {
         id: overwritePrompt
         parent: Overlay.overlay
@@ -626,7 +566,12 @@ ApplicationWindow {
 
         property bool decided: false
         onOpened: decided = false
-        onClosed: { if (!decided) appWindow.cancelOverwrite(); }
+        onClosed: {
+            if (!decided) {
+                appCtrl.pendingOverwritePath = "";
+                customFileDialog.openPicker(true);
+            }
+        }
 
         background: Rectangle {
             color: appPalette.popupBg
@@ -647,7 +592,7 @@ ApplicationWindow {
             }
 
             Label {
-                text: "\"" + appWindow.pendingOverwritePath.substring(appWindow.pendingOverwritePath.lastIndexOf("/") + 1)
+                text: "\"" + appCtrl.fileNameFromPath(appCtrl.pendingOverwritePath)
                 + "\" already exists. Saving will overwrite its contents."
                 font.pixelSize: 12
                 color: appPalette.textMuted
@@ -679,7 +624,8 @@ ApplicationWindow {
                     onClicked: {
                         overwritePrompt.decided = true;
                         overwritePrompt.close();
-                        appWindow.cancelOverwrite();
+                        appCtrl.pendingOverwritePath = "";
+                        customFileDialog.openPicker(true);
                     }
                 }
 
@@ -702,7 +648,9 @@ ApplicationWindow {
                     onClicked: {
                         overwritePrompt.decided = true;
                         overwritePrompt.close();
-                        appWindow.confirmOverwrite();
+                        var target = appCtrl.pendingOverwritePath;
+                        appCtrl.pendingOverwritePath = "";
+                        performSave(target, true);
                     }
                 }
             }
