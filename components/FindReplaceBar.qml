@@ -20,6 +20,9 @@ Rectangle {
 
     property var searchMatches: []
     property int currentSearchIndex: -1
+
+    property bool wholeWord: false
+
     signal matchSelected(int position)
 
     function show(withReplace) {
@@ -47,7 +50,7 @@ Rectangle {
             return;
         }
 
-        searchMatches = textSearcher.findAll(targetEditor.text, findInput.text, false, true);
+        searchMatches = textSearcher.findAll(targetEditor.text, findInput.text, false, root.wholeWord);
 
         if (searchMatches && searchMatches.length > 0) {
             if (currentSearchIndex < 0 || currentSearchIndex >= searchMatches.length) {
@@ -66,7 +69,7 @@ Rectangle {
     function refreshMatches() {
         if (!targetEditor || findInput.text.length === 0) return;
 
-        searchMatches = textSearcher.findAll(targetEditor.text, findInput.text, false, true);
+        searchMatches = textSearcher.findAll(targetEditor.text, findInput.text, false, root.wholeWord);
 
         if (!searchMatches || searchMatches.length === 0) {
             currentSearchIndex = -1;
@@ -112,7 +115,7 @@ Rectangle {
     function replaceAll() {
         if (!targetEditor || findInput.text.length === 0) return;
         var count = textSearcher.replaceAllInDocument(targetEditor.textDocument,
-                                                      findInput.text, replaceInput.text, false, true);
+        findInput.text, replaceInput.text, false, root.wholeWord);
         if (count > 0) updateSearch();
     }
 
@@ -153,6 +156,61 @@ Rectangle {
                     selectByMouse: true
                     onTextChanged: root.updateSearch()
                     onAccepted: root.findNext()
+
+                    Keys.onPressed: function(event) {
+                        if (event.key === Qt.Key_Escape) {
+                            root.hide();
+                            event.accepted = true;
+                        } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                            && (event.modifiers & Qt.ShiftModifier)) {
+                            root.findPrev();
+                        event.accepted = true;
+                            }
+                    }
+                }
+            }
+
+            Button {
+                id: wordBtn
+                text: "W"
+                checkable: true
+                checked: root.wholeWord
+                implicitWidth: 24
+                implicitHeight: 24
+
+                onToggled: { root.wholeWord = checked; root.updateSearch(); }
+
+                ToolTip {
+                    id: wordTip
+                    visible: wordBtn.hovered
+                    text: "Whole word"
+
+                    contentItem: Text {
+                        text: wordTip.text
+                        font.pixelSize: 11
+                        color: root.appPalette.isDark ? "#ffffff" : wordTip.palette.toolTipText
+                    }
+
+                    background: Rectangle {
+                        color: root.appPalette.isDark ? "#4b5263" : wordTip.palette.toolTipBase
+                        border.color: root.appPalette.isDark ? "#5c6370" : wordTip.palette.dark
+                        radius: 3
+                    }
+                }
+
+                contentItem: Text {
+                    text: wordBtn.text
+                    color: wordBtn.checked ? "#ffffff" : root.appPalette.textMain
+                    font.pixelSize: 11
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                background: Rectangle {
+                    color: wordBtn.checked ? root.appPalette.highlight
+                    : (wordBtn.hovered ? root.appPalette.editorBg : "transparent")
+                    border.color: root.appPalette.border
+                    radius: 3
                 }
             }
 
@@ -177,7 +235,8 @@ Rectangle {
                     verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
-                    color: prevBtn.down ? "#111215" : (prevBtn.hovered ? root.appPalette.editorBg : "transparent")
+                    color: prevBtn.down ? root.appPalette.highlight
+                    : (prevBtn.hovered ? root.appPalette.hoverBg : "transparent")
                     border.color: root.appPalette.border
                     radius: 3
                 }
@@ -196,7 +255,7 @@ Rectangle {
                     verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
-                    color: nextBtn.down ? "#111215" : (nextBtn.hovered ? root.appPalette.editorBg : "transparent")
+                    color: nextBtn.down ? root.appPalette.highlight : (nextBtn.hovered ? root.appPalette.hoverBg : "transparent")
                     border.color: root.appPalette.border
                     radius: 3
                 }
@@ -239,6 +298,7 @@ Rectangle {
                     font.pixelSize: 12
                     selectByMouse: true
                     onAccepted: root.replaceCurrent()
+                    Keys.onEscapePressed: root.hide()
                 }
             }
 
@@ -254,7 +314,8 @@ Rectangle {
                     verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
-                    color: repBtn.down ? "#111215" : (repBtn.hovered ? root.appPalette.editorBg : "transparent")
+                    color: repBtn.down ? root.appPalette.highlight
+                    : (repBtn.hovered ? root.appPalette.hoverBg : "transparent")
                     border.color: root.appPalette.border
                     radius: 3
                 }
@@ -273,7 +334,7 @@ Rectangle {
                     verticalAlignment: Text.AlignVCenter
                 }
                 background: Rectangle {
-                    color: repAllBtn.down ? "#111215" : (repAllBtn.hovered ? root.appPalette.editorBg : "transparent")
+                    color: repAllBtn.down ? root.appPalette.highlight : (repAllBtn.hovered ? root.appPalette.hoverBg : "transparent")
                     border.color: root.appPalette.border
                     radius: 3
                 }

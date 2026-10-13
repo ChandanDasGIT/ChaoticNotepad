@@ -5,10 +5,17 @@
 CppHighlighter::CppHighlighter(QObject *parent)
 : QSyntaxHighlighter(parent)
 {
+    buildRules();
+}
+
+void CppHighlighter::buildRules()
+{
+    m_highlightingRules.clear();
+    const bool dark = m_isDark;
     HighlightingRule rule;
 
     // 1. C++ Keywords & Commands
-    m_keywordFormat.setForeground(QColor("#c678dd")); // Purple
+    m_keywordFormat.setForeground(QColor(dark ? "#c678dd" : "#a626a4")); // Purple
     m_keywordFormat.setFontWeight(QFont::Bold);
     const QString keywordPatterns[] = {
         QStringLiteral("\\bchar\\b"), QStringLiteral("\\bclass\\b"), QStringLiteral("\\bconst\\b"),
@@ -32,15 +39,18 @@ CppHighlighter::CppHighlighter(QObject *parent)
         QStringLiteral("\\bconcept\\b"), QStringLiteral("\\bimport\\b"), QStringLiteral("\\bmodule\\b"),
         QStringLiteral("\\bfunction\\b")
     };
-    for (const QString &pattern : keywordPatterns) {
-        rule.pattern = QRegularExpression(pattern);
-        rule.format = m_keywordFormat;
-        m_highlightingRules.append(rule);
-    }
+    // One combined regex instead of ~60 separate ones: "\bchar\b" -> "char"
+    QStringList keywordWords;
+    for (const QString &pattern : keywordPatterns)
+        keywordWords << pattern.mid(2, pattern.size() - 4);
+    rule.pattern = QRegularExpression(QStringLiteral("\\b(?:") + keywordWords.join(QLatin1Char('|'))
+    + QStringLiteral(")\\b"));
+    rule.format = m_keywordFormat;
+    m_highlightingRules.append(rule);
 
     // 2. QML Declarations: 'property' and 'var'
     QTextCharFormat qmlDeclFormat;
-    qmlDeclFormat.setForeground(QColor("#e5c07b")); // Warm Gold
+    qmlDeclFormat.setForeground(QColor(dark ? "#e5c07b" : "#986801")); // Warm Gold
     qmlDeclFormat.setFontWeight(QFont::Bold);
     const QString qmlDeclPatterns[] = {
         QStringLiteral("\\bproperty\\b"),
@@ -53,28 +63,28 @@ CppHighlighter::CppHighlighter(QObject *parent)
     }
 
     // 3. Preprocessor Directives (#include, #define, #pragma, etc.)
-    m_preprocessorFormat.setForeground(QColor("#61afef")); // Sky Blue
+    m_preprocessorFormat.setForeground(QColor(dark ? "#61afef" : "#4078f2")); // Sky Blue
     rule.pattern = QRegularExpression(QStringLiteral("#[a-zA-Z_]+"));
     rule.format = m_preprocessorFormat;
     m_highlightingRules.append(rule);
 
     // 4. C++ Scope Resolution Operator: word1::word2 (e.g. std::cout, Qt::Key_Up)
     QTextCharFormat scopeFormat;
-    scopeFormat.setForeground(QColor("#56b6c2")); // Cyan
+    scopeFormat.setForeground(QColor(dark ? "#56b6c2" : "#0184bc")); // Cyan
     rule.pattern = QRegularExpression(QStringLiteral("\\b[A-Za-z_][A-Za-z0-9_]*(?=::)|(?<=::)[A-Za-z_][A-Za-z0-9_]*\\b"));
     rule.format = scopeFormat;
     m_highlightingRules.append(rule);
 
     // 5. Class / Type Names (anything starting with a capital letter)
     // Same green as strings / include paths, no bold.
-    m_classFormat.setForeground(QColor("#98c379"));
+    m_classFormat.setForeground(QColor(dark ? "#98c379" : "#3a8a3d"));
     rule.pattern = QRegularExpression(QStringLiteral("\\b[A-Z][A-Za-z0-9_]*\\b"));
     rule.format = m_classFormat;
     m_highlightingRules.append(rule);
 
     // 6. Member / Property Access (words around dot: word.word2)
     QTextCharFormat memberFormat;
-    memberFormat.setForeground(QColor("#e06c75")); // Soft Coral / Red
+    memberFormat.setForeground(QColor(dark ? "#e06c75" : "#e45649")); // Soft Coral / Red
     rule.pattern = QRegularExpression(QStringLiteral("\\b[A-Za-z_][A-Za-z0-9_]*(?=\\.)|(?<=\\.)[A-Za-z_][A-Za-z0-9_]*\\b"));
     rule.format = memberFormat;
     m_highlightingRules.append(rule);
@@ -82,7 +92,7 @@ CppHighlighter::CppHighlighter(QObject *parent)
     // 7. Words followed by a colon (e.g. key:, property:, case label:)
     // Excludes C++ scope operator '::'
     QTextCharFormat colonKeyFormat;
-    colonKeyFormat.setForeground(QColor("#d19a66")); // Warm Sand / Orange
+    colonKeyFormat.setForeground(QColor(dark ? "#d19a66" : "#b45f06")); // Warm Sand / Orange
     rule.pattern = QRegularExpression(QStringLiteral("\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*:(?!:))"));
     rule.format = colonKeyFormat;
     m_highlightingRules.append(rule);
@@ -90,25 +100,25 @@ CppHighlighter::CppHighlighter(QObject *parent)
     // 8. Words followed by '=' assignment (e.g. let foo = 10; var x = ...)
     // Excludes '==' and '=>'
     QTextCharFormat assignTargetFormat;
-    assignTargetFormat.setForeground(QColor("#d19a66")); // Warm Sand / Orange
+    assignTargetFormat.setForeground(QColor(dark ? "#d19a66" : "#b45f06")); // Warm Sand / Orange
     rule.pattern = QRegularExpression(QStringLiteral("\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*=(?![=>]))"));
     rule.format = assignTargetFormat;
     m_highlightingRules.append(rule);
 
     // 9. Functions / Words with brackets or braces: word(...), word{...}, word[...]
-    m_functionFormat.setForeground(QColor("#61afef")); // Blue
+    m_functionFormat.setForeground(QColor(dark ? "#61afef" : "#4078f2")); // Blue
     rule.pattern = QRegularExpression(QStringLiteral("\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*[\\(\\{\\[])"));
     rule.format = m_functionFormat;
     m_highlightingRules.append(rule);
 
     // 10. Numeric literals (Hex, floats, integers)
-    m_numberFormat.setForeground(QColor("#98c379")); // Mint Green
+    m_numberFormat.setForeground(QColor(dark ? "#98c379" : "#3a8a3d")); // Mint Green
     rule.pattern = QRegularExpression(QStringLiteral("\\b0x[0-9a-fA-F]+\\b|\\b[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?\\b"));
     rule.format = m_numberFormat;
     m_highlightingRules.append(rule);
 
     // 11. Strings
-    m_quotationFormat.setForeground(QColor("#98c379")); // Soft Green
+    m_quotationFormat.setForeground(QColor(dark ? "#98c379" : "#3a8a3d")); // Soft Green
     rule.pattern = QRegularExpression(QStringLiteral("\".*?\"|'.*?'"));
     rule.format = m_quotationFormat;
     m_highlightingRules.append(rule);
@@ -116,9 +126,9 @@ CppHighlighter::CppHighlighter(QObject *parent)
     // Comment formats. Comments are NOT regex rules: they are found by a small
     // scanner in applyCommentFormats() that runs after all the rules above,
     // so they always override them (and ignore comment tokens inside strings).
-    m_singleLineCommentFormat.setForeground(QColor("#5c6370")); // Muted Gray
+    m_singleLineCommentFormat.setForeground(QColor(dark ? "#5c6370" : "#8a8d96")); // Muted Gray
     m_singleLineCommentFormat.setFontItalic(true);
-    m_multiLineCommentFormat.setForeground(QColor("#5c6370"));
+    m_multiLineCommentFormat.setForeground(QColor(dark ? "#5c6370" : "#8a8d96"));
     m_multiLineCommentFormat.setFontItalic(true);
 
     applyLanguage();
@@ -156,6 +166,20 @@ void CppHighlighter::setFilePath(const QString &path)
     }
 }
 
+bool CppHighlighter::isDark() const
+{
+    return m_isDark;
+}
+
+void CppHighlighter::setIsDark(bool dark)
+{
+    if (m_isDark == dark) return;
+    m_isDark = dark;
+    buildRules();
+    emit isDarkChanged();
+    rehighlight();
+}
+
 void CppHighlighter::applyLanguage()
 {
     switch (m_language) {
@@ -185,11 +209,34 @@ QString CppHighlighter::highlightedWord() const
 
 void CppHighlighter::setHighlightedWord(const QString &word)
 {
-    if (m_highlightedWord != word) {
-        m_highlightedWord = word;
-        emit highlightedWordChanged();
-        rehighlight();
+    if (m_highlightedWord == word) return;
+
+    const QString oldWord = m_highlightedWord;
+    m_highlightedWord = word;
+    m_wordRegex = (word.trimmed().isEmpty() || word.length() <= 1)
+    ? QRegularExpression()
+    : QRegularExpression(QStringLiteral("\\b") + QRegularExpression::escape(word)
+    + QStringLiteral("\\b"));
+    emit highlightedWordChanged();
+
+    QTextDocument *doc = document();
+    if (!doc) return;
+
+    // Only the lines that contain the old or the new word need to be redone
+    QVector<QTextBlock> hits;
+    for (QTextBlock b = doc->begin(); b.isValid(); b = b.next()) {
+        const QString t = b.text();
+        if ((!oldWord.isEmpty() && t.contains(oldWord)) || (!word.isEmpty() && t.contains(word))) {
+            hits.append(b);
+            if (hits.size() > 300) break;
+        }
     }
+    if (hits.size() > 300) {      // a very common word: one full pass is cheaper
+        rehighlight();
+        return;
+    }
+    for (const QTextBlock &b : std::as_const(hits))
+        rehighlightBlock(b);
 }
 
 int CppHighlighter::cursorPosition() const
@@ -395,14 +442,13 @@ void CppHighlighter::highlightBlock(const QString &text)
     applyCommentFormats(text);
 
     // 3. Word occurrence highlighting (background only, keeps the text color)
-    if (!m_highlightedWord.trimmed().isEmpty() && m_highlightedWord.length() > 1) {
-        QRegularExpression wordRegex(QStringLiteral("\\b") + QRegularExpression::escape(m_highlightedWord) + QStringLiteral("\\b"));
-        QRegularExpressionMatchIterator it = wordRegex.globalMatch(text);
+    if (!m_wordRegex.pattern().isEmpty() && text.contains(m_highlightedWord)) {
+        QRegularExpressionMatchIterator it = m_wordRegex.globalMatch(text);
         while (it.hasNext()) {
             QRegularExpressionMatch match = it.next();
             for (int k = match.capturedStart(); k < match.capturedEnd(); ++k) {
                 QTextCharFormat f = format(k);
-                f.setBackground(QColor("#3e4451"));
+                f.setBackground(QColor(m_isDark ? "#3e4451" : "#d6e4f7"));
                 setFormat(k, 1, f);
             }
         }
@@ -413,8 +459,8 @@ void CppHighlighter::highlightBlock(const QString &text)
     int blockEnd = blockStart + text.length();
 
     QTextCharFormat bracketFormat;
-    bracketFormat.setBackground(QColor("#3d4451"));
-    bracketFormat.setForeground(QColor("#00e6c3")); // High-visibility teal accent
+    bracketFormat.setBackground(QColor(m_isDark ? "#3d4451" : "#d6e4f7"));
+    bracketFormat.setForeground(QColor(m_isDark ? "#00e6c3" : "#007a66"));
     bracketFormat.setFontWeight(QFont::Bold);
 
     if (m_matchedBracket1 >= blockStart && m_matchedBracket1 < blockEnd) {

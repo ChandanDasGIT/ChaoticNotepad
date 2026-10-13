@@ -1,0 +1,41 @@
+################# version 2 ########################
+
+## Worth fixing
+--- 1. **Saving puts a stray newline into the editor.** `performSave` inserts a `\n` into the editor when the text lacks a trailing newline, so the first Ctrl+Z after saving undoes only that newline. --> i want the \n when i save but not the undo bug.
+2. **Save As can overwrite a file that's open in another tab.** You end up with two tabs pointing at one path, and saving from one silently clobbers the other. --> how? i think i have made it that same file cannot be opened in two diff tab. u mean if i have a trail.txt, then i create a new tab and save that trail.txt it would silently replace the og one? then it will need fix, maybe give an error window?
+3. **Shift+Tab with no selection** removes up to 4 spaces before the caret even in the middle of a line. It should only remove leading indentation. --> i don't think shift tab works at all. also, i cannot select a few text and press tab to move 4 space every line. apparently every selected text is being replace by tab spaces
+4. **With a selection plus extra carets, typing doesn't replace the selection.** --> apparently the MultiCursor thingy is broken so yupe this needs fixing. i can place multicursor but the thing is when i type something only the last added cursor works.
+5. **File dialog:** typing an absolute path in the File field gives `baseDir + "//abs/path"` instead of the path you typed. -->ok fix this
+
+## IGNORE ## 6. **Find bar:**
+   - Typing always jumps to the first match in the file, not the one nearest the caret.
+   - Ctrl+F collapses the replace row every time it opens. -->no need to fix this ---
+
+--> multicursor: i can place multicursor but the thing is when i type something only the last added cursor works.
+
+## Smaller
+- **The tab bar doesn't scroll to the current tab** when many tabs are open. --> fix this
+- **Missing shortcuts:** Ctrl+N, Ctrl+O, Ctrl+W, Ctrl+Tab. -->fix this
+
+
+- **`main.cpp` only opens the first file argument.** `.desktop` files usually pass `%F` for several files. --> please explain
+- **Minimap `charWidth` is never set.** `Minimap.qml` leaves it at 1.0, so the blocks assume a 1px character width regardless of font size. --> please explain
+- **String highlighting:** the regex `".*?"` mishandles escaped quotes, such as `"a\"b"`. --> please explain
+- **`QSaveFile` and the watcher:** a rename-style save can drop the watch if the new file isn't there yet when the event fires. This is the one I mentioned when we added `QSaveFile`, and your save test should show whether it happens. --> please explain
+
+## Cleanup
+- `CMakeLists.txt` says version `0.1` but your release is `v0.2.0`.
+- The comment in `linediffer.h` says 0/1/2, but it only returns 0 or 1.
+- The `lspclient` files are in the tree but unused and can't compile without `lspclientprotocol.h`.
+
+## Check for leftover dark colors
+I saw hard-coded dark colors in places I'm not sure you've covered:
+- `FindReplaceBar.qml`: the button pressed color `#111215`.
+- `SettingsDialog.qml`: the switch's off-state track `#16181d`.
+- `SettingsDialog.qml`: the font-size buttons, `#111215` and `#282c34`.
+
+If any of those still appear dark on the light theme, swap them for `appPalette` colors.
+
+
+
+

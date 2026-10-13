@@ -118,7 +118,7 @@ Popup {
                 contentItem: Text {
                     text: "Cancel"
                     font.pixelSize: 12
-                    color: cancelBtn.hovered ? "#ffffff" : ((root.appPalette && root.appPalette.textMain) ? root.appPalette.textMain : "#abb2bf")
+                    color: cancelBtn.hovered ? (root.appPalette ? root.appPalette.textMain : "#abb2bf") : (root.appPalette ? root.appPalette.textMain : "#abb2bf")
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -126,9 +126,9 @@ Popup {
                     implicitWidth: 70
                     implicitHeight: 28
                     radius: 4
-                    color: cancelBtn.down ? "#111215"
-                    : (cancelBtn.hovered ? "#22252a"
-                    : "#16181d")
+                    color: cancelBtn.down ? (root.appPalette ? root.appPalette.highlight : "#528bff")
+                    : (cancelBtn.hovered ? (root.appPalette ? root.appPalette.hoverBg : "#2c313a")
+                    : (root.appPalette ? root.appPalette.tabBg : "#21252b"))
                     border.color: (root.appPalette && root.appPalette.border) ? root.appPalette.border : "#30363d"
                     border.width: 1
                 }

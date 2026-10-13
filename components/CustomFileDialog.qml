@@ -257,9 +257,29 @@ Popup {
                 }
                 onClicked: {
                     if (fileNameInput.text.trim() === "") return;
+                    var typed = fileNameInput.text.trim();
                     var baseDir = FileIO.toLocalPath(folderModel.folder.toString());
-                    var full = baseDir + "/" + fileNameInput.text.trim();
-                    filePopup.fileConfirmed(full, fileNameInput.text.trim(), filePopup.isSaveMode);
+                    var homeDir = FileIO.toLocalPath(StandardPaths.writableLocation(StandardPaths.HomeLocation).toString());
+
+                    var full;
+                    if (typed === "~")
+                        full = homeDir;
+                    else if (typed.startsWith("~/"))
+                        full = homeDir + typed.substring(1);
+                    else if (typed.startsWith("/"))
+                        full = typed;                       // absolute: use as typed
+                        else
+                            full = baseDir + "/" + typed;
+
+                    // A trailing slash means a folder: go there instead of confirming
+                    if (full.endsWith("/")) {
+                        filePopup.currentFolder = FileIO.toFileUrl(full);
+                        fileNameInput.text = "";
+                        return;
+                    }
+
+                    var shortName = full.substring(full.lastIndexOf("/") + 1);
+                    filePopup.fileConfirmed(full, shortName, filePopup.isSaveMode);
                     filePopup.close();
                 }
             }

@@ -194,9 +194,9 @@ Popup {
                                 implicitWidth: 28
                                 implicitHeight: 28
                                 radius: 4
-                                color: decBtn.down ? "#111215"
-                                     : (decBtn.hovered ? "#282c34"
-                                     : (dialog.appPalette ? dialog.appPalette.editorBg : "#1e2227"))
+                                color: decBtn.down ? (dialog.appPalette ? dialog.appPalette.highlight : "#528bff")
+                                : (decBtn.hovered ? (dialog.appPalette ? dialog.appPalette.hoverBg : "#282c34")
+                                : (dialog.appPalette ? dialog.appPalette.editorBg : "#1e2227"))
                                 border.color: dialog.appPalette ? dialog.appPalette.border : "#30363d"
                                 border.width: 1
                             }
@@ -236,9 +236,9 @@ Popup {
                                 implicitWidth: 28
                                 implicitHeight: 28
                                 radius: 4
-                                color: incBtn.down ? "#111215"
-                                     : (incBtn.hovered ? "#282c34"
-                                     : (dialog.appPalette ? dialog.appPalette.editorBg : "#1e2227"))
+                                color: incBtn.down ? (dialog.appPalette ? dialog.appPalette.highlight : "#528bff")
+                                : (incBtn.hovered ? (dialog.appPalette ? dialog.appPalette.hoverBg : "#282c34")
+                                : (dialog.appPalette ? dialog.appPalette.editorBg : "#1e2227"))
                                 border.color: dialog.appPalette ? dialog.appPalette.border : "#30363d"
                                 border.width: 1
                             }
@@ -342,9 +342,9 @@ Popup {
                     implicitWidth: 74
                     implicitHeight: 28
                     radius: 4
-                    color: closeBtn.down ? "#111215"
-                         : (closeBtn.hovered ? "#282c34"
-                         : "#16181d")
+                    color: closeBtn.down ? (dialog.appPalette ? dialog.appPalette.highlight : "#528bff")
+                    : (closeBtn.hovered ? (dialog.appPalette ? dialog.appPalette.hoverBg : "#2c313a")
+                    : (dialog.appPalette ? dialog.appPalette.tabBg : "#21252b"))
                     border.color: dialog.appPalette ? dialog.appPalette.border : "#30363d"
                     border.width: 1
                 }

@@ -17,6 +17,7 @@ class CppHighlighter : public QSyntaxHighlighter
     Q_PROPERTY(QString highlightedWord READ highlightedWord WRITE setHighlightedWord NOTIFY highlightedWordChanged)
     Q_PROPERTY(int cursorPosition READ cursorPosition WRITE setCursorPosition NOTIFY cursorPositionChanged)
     Q_PROPERTY(QString filePath READ filePath WRITE setFilePath NOTIFY filePathChanged)
+    Q_PROPERTY(bool isDark READ isDark WRITE setIsDark NOTIFY isDarkChanged)
 
 public:
     explicit CppHighlighter(QObject *parent = nullptr);
@@ -33,10 +34,14 @@ public:
     QString filePath() const;
     void setFilePath(const QString &path);
 
+    bool isDark() const;
+    void setIsDark(bool dark);
+
 signals:
     void highlightedWordChanged();
     void cursorPositionChanged();
     void filePathChanged();
+    void isDarkChanged();
 
 protected:
     void highlightBlock(const QString &text) override;
@@ -68,7 +73,13 @@ private:
     Language m_language = Language::Cpp;
     QString m_filePath;
 
+    bool m_isDark = true;
+    void buildRules();
+
     QString m_highlightedWord;
+
+    QRegularExpression m_wordRegex;
+
     int m_cursorPosition = -1;
     int m_matchedBracket1 = -1;
     int m_matchedBracket2 = -1;

@@ -1,4 +1,6 @@
 import QtQuick
+import QtQuick
+import NotepadQtQuick
 
 QtObject {
     id: root
@@ -6,6 +8,8 @@ QtObject {
     required property var editor
     property var multi: null
     property string commentToken: "//"
+
+    property var edits: TextSearcher { }
 
     // Start index of the line containing position p. The old
     // lastIndexOf("\n", p - 1) is wrong at p === 0: a negative fromIndex is
@@ -82,10 +86,14 @@ QtObject {
     }
 
     function handleKeyPress(event) {
-        if (multi && multi.active && handleMultiCursorKey(event)) return;
-
-        var pos = editor.cursorPosition;
-        var doc = editor.text;
+        // Fast path: keys that none of the editing features care about skip the text copy
+        var k = event.key, m = event.modifiers;
+        var needsText = ((m === Qt.AltModifier) && (k === Qt.Key_Up || k === Qt.Key_Down))
+        || k === Qt.Key_Tab || k === Qt.Key_Backtab
+        || ((m === Qt.ControlModifier) && (k === Qt.Key_Slash || k === Qt.Key_D))
+        || k === Qt.Key_Return || k === Qt.Key_Enter
+        || (event.text.length === 1 && "(){}[]\"'".indexOf(event.text) !== -1);
+        if (!needsText) return;
 
         // 1. Move Lines Up / Down: Alt + Up / Alt + Down
         if (event.modifiers === Qt.AltModifier && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
@@ -110,8 +118,8 @@ QtObject {
                     var replaceStart = lineStartOf(doc, startBound - 1);
                     var newChunk = lines.slice(startLine - 1, endLine + 1).join("\n");
 
-                    editor.remove(replaceStart, endBound);
-                    editor.insert(replaceStart, newChunk);
+                    edits.replaceRange(editor.textDocument, replaceStart, endBound - replaceStart, newChunk);
+
                     var shiftedStart = lines.slice(0, startLine - 1).join("\n").length + (startLine - 1 > 0 ? 1 : 0);
                     var shiftedEnd = lines.slice(0, endLine).join("\n").length;
                     editor.select(shiftedStart, shiftedEnd);
@@ -125,8 +133,8 @@ QtObject {
                     var replaceEnd = (nextLineEnd === -1) ? doc.length : nextLineEnd;
                     var newChunk2 = lines.slice(startLine, endLine + 2).join("\n");
 
-                    editor.remove(startBound, replaceEnd);
-                    editor.insert(startBound, newChunk2);
+                    edits.replaceRange(editor.textDocument, startBound, replaceEnd - startBound, newChunk2);
+
                     var shiftedStart2 = lines.slice(0, startLine + 1).join("\n").length + 1;
                     var shiftedEnd2 = lines.slice(0, endLine + 2).join("\n").length;
                     editor.select(shiftedStart2, shiftedEnd2);
@@ -166,8 +174,8 @@ QtObject {
                 }
 
                 var newChunkTab = modifiedLines.join("\n");
-                editor.remove(rStart, rEnd);
-                editor.insert(rStart, newChunkTab);
+                edits.replaceRange(editor.textDocument, rStart, rEnd - rStart, newChunkTab);
+
                 editor.select(rStart, rEnd + netOffsetChange);
             } else {
                 if (isShift) {
@@ -235,8 +243,7 @@ QtObject {
 
             var newChunkC = cLines.join("\n");
             var cDelta = newChunkC.length - (cEndIdx - cStartIdx);
-            editor.remove(cStartIdx, cEndIdx);
-            editor.insert(cStartIdx, newChunkC);
+            edits.replaceRange(editor.textDocument, cStartIdx, cEndIdx - cStartIdx, newChunkC);
 
             if (hasCSel) {
                 editor.select(cStartIdx, cStartIdx + newChunkC.length);   // whole block, so Ctrl+/ again toggles it back
@@ -274,34 +281,42 @@ QtObject {
 
         // 5. Smart Indent on Enter
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            // Enter over a selection replaces it: remove the selection first
-            if (editor.selectionStart !== editor.selectionEnd) {
-                var delFrom = editor.selectionStart;
-                editor.remove(delFrom, editor.selectionEnd);
-                editor.cursorPosition = delFrom;
-                pos = delFrom;
-                doc = editor.text;
-            }
-            var charBefore = (pos > 0) ? doc.charAt(pos - 1) : "";
-            var charAfter = (pos < doc.length) ? doc.charAt(pos) : "";
+            var hasEnterSel = editor.selectionStart !== editor.selectionEnd;
+            var selFromE = hasEnterSel ? editor.selectionStart : pos;
+            var selToE = hasEnterSel ? editor.selectionEnd : pos;
+
+            // The text as it will look once the selection is gone
+            var base = hasEnterSel ? doc.substring(0, selFromE) + doc.substring(selToE) : doc;
+            pos = selFromE;
+
+            var charBefore = (pos > 0) ? base.charAt(pos - 1) : "";
+            var charAfter = (pos < base.length) ? base.charAt(pos) : "";
 
             if (charBefore === "{" && charAfter === "}") {
-                var brLine = doc.substring(lineStartOf(doc, pos - 1), pos - 1);
+                var brLine = base.substring(lineStartOf(base, pos - 1), pos - 1);
                 var brIndent = (brLine.match(/^(\s*)/) || ["", ""])[1];
                 var extra = "    ";
 
-                editor.insert(pos, "\n" + brIndent + extra + "\n" + brIndent);
+                var braceText = "\n" + brIndent + extra + "\n" + brIndent;
+                if (hasEnterSel)
+                    edits.replaceRange(editor.textDocument, selFromE, selToE - selFromE, braceText);
+                else
+                    editor.insert(pos, braceText);
                 editor.cursorPosition = pos + 1 + brIndent.length + extra.length;
                 event.accepted = true;
                 return;
             }
 
-            var curLine = doc.substring(lineStartOf(doc, pos), pos);
+            var curLine = base.substring(lineStartOf(base, pos), pos);
             var matchWs = curLine.match(/^(\s*)/);
             var leadWs = matchWs ? matchWs[1] : "";
 
-            if (leadWs.length > 0) {
-                editor.insert(pos, "\n" + leadWs);
+            if (leadWs.length > 0 || hasEnterSel) {
+                var indentText = "\n" + leadWs;
+                if (hasEnterSel)
+                    edits.replaceRange(editor.textDocument, selFromE, selToE - selFromE, indentText);
+                else
+                    editor.insert(pos, indentText);
                 editor.cursorPosition = pos + 1 + leadWs.length;
                 event.accepted = true;
                 return;
@@ -323,8 +338,8 @@ QtObject {
         if (hasSel && typed.length === 1 && pairs[typed] !== undefined) {
             var wrapFrom = editor.selectionStart;
             var wrapTo = editor.selectionEnd;
-            editor.insert(wrapTo, pairs[typed]);
-            editor.insert(wrapFrom, typed);
+            var inner = doc.substring(wrapFrom, wrapTo);
+            edits.replaceRange(editor.textDocument, wrapFrom, wrapTo - wrapFrom, typed + inner + pairs[typed]);
             editor.select(wrapFrom + 1, wrapTo + 1);
             event.accepted = true;
             return;

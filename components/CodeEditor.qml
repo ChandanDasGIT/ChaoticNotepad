@@ -133,8 +133,6 @@ Item {
                 parsedData.push(rawData[i]);
             }
             root.stickyLinesData = parsedData;
-
-            console.log("STICKY DATA:", JSON.stringify(parsedData));
         }
 
         Timer {
@@ -175,6 +173,7 @@ Item {
         CppHighlighter {
             id: highlighter
             highlightedWord: editorFlickable.wordToHighlight
+            isDark: root.appPalette.isDark
         }
 
         function updateHighlighter() {
@@ -241,6 +240,7 @@ Item {
                     id: lineGutter
                     height: parent.height
                     editor: editor
+                    flick: editorFlickable
                     appPalette: root.appPalette
                     diskContent: root.diskContent
                     originalContent: root.originalContent

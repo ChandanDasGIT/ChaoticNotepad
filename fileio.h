@@ -11,6 +11,7 @@
 #include <QVariantMap>
 #include <QStringConverter>
 #include <QtQml/qqmlregistration.h>
+#include <QSaveFile>
 
 class FileIO : public QObject
 {
@@ -32,6 +33,7 @@ public:
         QVariantMap result;
         result.insert(QStringLiteral("ok"), false);
         result.insert(QStringLiteral("text"), QString());
+        result.insert(QStringLiteral("lineEnding"), QStringLiteral("\n"));
 
         if (filePath.isEmpty()) {
             result.insert(QStringLiteral("error"), QStringLiteral("No file path given."));
@@ -45,6 +47,13 @@ public:
         }
         if (!info.isFile()) {
             result.insert(QStringLiteral("error"), QStringLiteral("Not a regular file: %1").arg(filePath));
+            return result;
+        }
+
+        constexpr qint64 kMaxFileBytes = 20 * 1024 * 1024;   // raise this if you like
+        if (info.size() > kMaxFileBytes) {
+            result.insert(QStringLiteral("error"),
+                          QStringLiteral("%1 is larger than 20 MB; not opened.").arg(info.fileName()));
             return result;
         }
 
@@ -73,13 +82,15 @@ public:
             return result;
         }
 
-        // Same line-ending handling as the old QIODevice::Text read
+        // Remember the file's line ending so save can restore it, then work in LF
+        const bool usesCrlf = content.contains(QStringLiteral("\r\n"));
         content.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
 
         watchFileInternal(filePath);
 
         result[QStringLiteral("ok")] = true;
         result[QStringLiteral("text")] = content;
+        result[QStringLiteral("lineEnding")] = usesCrlf ? QStringLiteral("\r\n") : QStringLiteral("\n");
         return result;
     }
 
@@ -88,29 +99,30 @@ public:
         return readFileResult(filePath).value(QStringLiteral("text")).toString();
     }
 
-    Q_INVOKABLE bool writeFile(const QString &filePath, const QString &content) {
+    Q_INVOKABLE bool writeFile(const QString &filePath, const QString &content,
+                               const QString &lineEnding = QStringLiteral("\n")) {
         if (filePath.isEmpty()) return false;
 
-        QFile file(filePath);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QString out = content;
+        if (lineEnding == QStringLiteral("\r\n"))
+            out.replace(QLatin1Char('\n'), QStringLiteral("\r\n"));
+
+        // Written to a temp file first, then swapped in only if everything succeeded
+        QSaveFile file(filePath);
+        if (!file.open(QIODevice::WriteOnly)) return false;
+
+        const QByteArray bytes = out.toUtf8();
+        if (file.write(bytes) != bytes.size()) {
+            file.cancelWriting();
             return false;
         }
-
-        QTextStream out(&file);
-        out << content;
-        out.flush();
-        const bool wrote = (out.status() == QTextStream::Ok) && (file.error() == QFile::NoError);
-        file.close();
-        if (!wrote) return false;
+        if (!file.commit()) return false;
 
         // Remember what we wrote so the watcher can recognise its own save
         m_lastWritten.insert(filePath, content);
-
-        // Ensure this file continues to be tracked
         watchFileInternal(filePath);
-
         return true;
-    }
+                               }
 
     Q_INVOKABLE void unwatchFile(const QString &filePath) {
         if (filePath.isEmpty()) return;

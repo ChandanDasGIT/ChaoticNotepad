@@ -23,10 +23,11 @@ Item {
         id: tabListModel
     }
 
-    function createTab(title, filePath, content) {
+    function createTab(title, filePath, content, lineEnding) {
         var t = (title !== undefined && title !== null && title !== "") ? title : "untitled";
         var fp = (filePath !== undefined && filePath !== null) ? filePath : "";
         var c = (content !== undefined && content !== null) ? content : "";
+        var le = (lineEnding === "\r\n") ? "\r\n" : "\n";
 
         tabListModel.append({
             title: t,
@@ -34,7 +35,8 @@ Item {
             isDirty: false,
             externallyModified: false,
             savedText: c,
-            originalText: c
+            originalText: c,
+            lineEnding: le
         });
 
         currentIndex = tabListModel.count - 1;
@@ -107,6 +109,11 @@ Item {
         if (index < 0 || index >= tabListModel.count) return;
         if (tabListModel.get(index).externallyModified !== value)
             tabListModel.setProperty(index, "externallyModified", value);
+    }
+
+    function setLineEnding(index, value) {
+        if (index < 0 || index >= tabListModel.count) return;
+        tabListModel.setProperty(index, "lineEnding", value === "\r\n" ? "\r\n" : "\n");
     }
 
     function hasUnsavedChanges() {

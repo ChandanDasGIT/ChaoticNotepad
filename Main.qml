@@ -79,7 +79,8 @@ ApplicationWindow {
 
         var textToSave = appCtrl.prepareTextForSave(codeEditor.realText());
 
-        if (FileIO.writeFile(targetPath, textToSave)) {
+        var lineEnding = (tabs.currentTab && tabs.currentTab.lineEnding) ? tabs.currentTab.lineEnding : "\n";
+            if (FileIO.writeFile(targetPath, textToSave, lineEnding)) {
             appWindow.isSyncingEditor = true;
             if (codeEditor.realText() !== textToSave) {
                 var savedCursor = codeEditor.textEdit.cursorPosition;
@@ -156,7 +157,7 @@ ApplicationWindow {
         var t = tabs.currentTab;
         var blankIndex = (t && t.filePath === "" && !t.isDirty && t.savedText === "") ? tabs.currentIndex : -1;
 
-        tabs.createTab(fileName, cleanPath, readResult.text);
+        tabs.createTab(fileName, cleanPath, readResult.text, readResult.lineEnding);
         if (blankIndex !== -1)
             tabs.closeTab(blankIndex);
 
@@ -178,7 +179,11 @@ ApplicationWindow {
 
     function restoreSessionIfEnabled() {
         if (!settingsDialog.restoreSession) return;
+
         var files = appSettings.sessionFiles;
+        if (typeof files === "string")
+            files = (files === "") ? [] : [files];
+
         if (files && files.length > 0) {
             for (var i = 0; i < files.length; ++i)
                 openFilePath(files[i]);
@@ -365,9 +370,10 @@ ApplicationWindow {
                                 var reloadResult = FileIO.readFileResult(tabs.currentTab.filePath);
                                 if (!reloadResult.ok) {
                                     showError(reloadResult.error);
-                                    return;
+                                     return;
                                 }
                                 var diskText = reloadResult.text;
+                                tabs.setLineEnding(tabs.currentIndex, reloadResult.lineEnding);
                                 appWindow.isSyncingEditor = true;
                                 codeEditor.text = diskText;
                                 Qt.callLater(function() { appWindow.isSyncingEditor = false; });
@@ -501,6 +507,16 @@ ApplicationWindow {
         onFileConfirmed: function(fullPath, fileName, isSave) {
             pickedFile = true;
             if (isSave) {
+                var openPaths = [];
+                for (var p = 0; p < tabs.model.count; ++p)
+                    openPaths.push(tabs.model.get(p).filePath);
+                var openIdx = appCtrl.findTabByPath(openPaths, fullPath);
+                if (openIdx !== -1 && openIdx !== tabs.currentIndex) {
+                    showError("\"" + appCtrl.fileNameFromPath(fullPath)
+                    + "\" is already open in another tab. Close that tab first or pick a different name.");
+                    Qt.callLater(function() { customFileDialog.openPicker(true); });
+                    return;
+                }
                 var sameAsCurrent = tabs.currentTab && tabs.currentTab.filePath === fullPath;
                 if (FileIO.fileExists(fullPath) && !sameAsCurrent) {
                     appCtrl.pendingOverwritePath = fullPath;
