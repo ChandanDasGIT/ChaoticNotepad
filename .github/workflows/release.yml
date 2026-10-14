@@ -1,0 +1,32 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build wget file \
+            libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 libxcb-cursor0 \
+            libvulkan-dev desktop-file-utils
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.5.3'
+          cache: true
+
+      - name: Build AppImage and tarball
+        run: ./packaging/build-appimage.sh "${GITHUB_REF_NAME#v}"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
