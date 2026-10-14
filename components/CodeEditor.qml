@@ -118,22 +118,20 @@ Item {
 
         property string wordToHighlight: ""
 
-        onContentYChanged: {
-            if (contentY <= 0) {
-                root.stickyLinesData = [];
-                return;
-            }
-            // Include leftPadding so the coordinate actually hits the text, not empty space
+        // Sticky lines for the current scroll position, fresh from the document
+        function computeSticky() {
+            if (contentY <= 0) return [];
             var pos = editor.positionAt(editor.leftPadding + 1, contentY + editor.topPadding + 1);
             var rawData = stickyScroll.getStickyLinesForPosition(pos);
-
-            // Force Qt to treat this as a standard JavaScript array so the UI reacts instantly
-            var parsedData = [];
-            for (var i = 0; i < rawData.length; ++i) {
-                parsedData.push(rawData[i]);
-            }
-            root.stickyLinesData = parsedData;
+            var parsed = [];
+            for (var i = 0; i < rawData.length; ++i)
+                parsed.push(rawData[i]);
+            return parsed;
         }
+
+        function refreshSticky() { root.stickyLinesData = computeSticky(); }
+
+        onContentYChanged: refreshSticky()
 
         Timer {
             id: selectionTimer
@@ -159,6 +157,7 @@ Item {
                 root.curCaret = editor.cursorPosition;
                 multiCaret.mergeWith(editor.cursorPosition);
                 selectionTimer.restart();
+                highlighter.cursorPosition = editor.cursorPosition;
                 editor.cursorVisible = false;
                 Qt.callLater(function() {
                     editor.cursorVisible = true;
@@ -399,13 +398,24 @@ Item {
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    // Move the cursor to the start of the pinned function
-                                    editor.cursorPosition = modelData.position;
-                                    editor.forceActiveFocus();
+                                onClicked: function(mouse) {
+                                    var row = index;
+                                    var blockSelect = (mouse.modifiers & Qt.ShiftModifier) !== 0;
 
-                                    // Scroll the editor up so the line is on screen
-                                    root.ensureVisible(modelData.position);
+                                    // Re-read from the document: the pinned data can be stale after typing
+                                    var d = editorFlickable.computeSticky()[row];
+                                    Qt.callLater(editorFlickable.refreshSticky);
+                                    if (!d) return;
+
+                                    editor.forceActiveFocus();
+                                    if (blockSelect && d.endPosition > d.position) {
+                                        multiCaret.clear();
+                                        editor.cursorPosition = d.endPosition;
+                                        editor.moveCursorSelection(d.position, TextEdit.SelectCharacters);
+                                    } else {
+                                        editor.cursorPosition = d.position;
+                                    }
+                                    root.ensureVisible(d.position);
                                 }
                             }
 

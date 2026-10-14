@@ -30,6 +30,7 @@ void StickyScroll::recalculateScopes()
     if (!m_doc) return;
     m_scopeEnds.clear();
     m_scopeEnds.fill(-1, m_doc->blockCount());
+    m_scopeEndPos.fill(-1, m_doc->blockCount());
 
     struct Open { QChar close; int line; };
     QList<Open> stack;
@@ -79,8 +80,13 @@ void StickyScroll::recalculateScopes()
                 for (int k = stack.size() - 1; k >= 0; --k) {
                     if (stack.at(k).close == c) {
                         const int open = stack.at(k).line;
-                        if (line > open && line > m_scopeEnds[open])
+                        const int endPos = b.position() + i + 1;   // just after the closing bracket
+                        if (line > open
+                            && (line > m_scopeEnds[open]
+                            || (line == m_scopeEnds[open] && endPos > m_scopeEndPos[open]))) {
                             m_scopeEnds[open] = line;
+                        m_scopeEndPos[open] = endPos;
+                            }
                         stack.resize(k);
                         break;
                     }
@@ -147,6 +153,7 @@ QVariantList StickyScroll::getStickyLinesForPosition(int pos)
         lineData["lineNum"] = actualLineNum;
         lineData["text"] = rawText;
         lineData["position"] = actualPosition;
+        lineData["endPosition"] = m_scopeEndPos.at(lineNum);
         result.append(lineData);
     }
 

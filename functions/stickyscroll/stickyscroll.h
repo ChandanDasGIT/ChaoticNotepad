@@ -28,5 +28,6 @@ private:
 
     QPointer<QTextDocument> m_doc;
     QList<int> m_scopeEnds;
+    QList<int> m_scopeEndPos;
     bool m_dirty = true;
 };

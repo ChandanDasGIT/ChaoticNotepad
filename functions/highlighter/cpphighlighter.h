@@ -7,6 +7,7 @@
 #include <QColor>
 #include <QString>
 #include <QVector>
+#include <QTextBlock>
 #include <QtQml/qqmlregistration.h>
 
 class CppHighlighter : public QSyntaxHighlighter
@@ -87,5 +88,6 @@ private:
     void applyLanguage();
     void applyCommentFormats(const QString &text);
     void updateBracketMatching();
-    int findMatchingBracket(const QString &text, int index, QChar openChar, QChar closeChar, bool forward);
+    void codeMask(const QTextBlock &block, QList<bool> &mask) const;
+    int findPartner(QTextBlock block, int col) const;
 };

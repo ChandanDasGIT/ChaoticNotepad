@@ -136,6 +136,8 @@ void CppHighlighter::buildRules()
 
 void CppHighlighter::setDocument(QQuickTextDocument *quickDocument)
 {
+    m_matchedBracket1 = -1;
+    m_matchedBracket2 = -1;
     if (quickDocument) {
         QSyntaxHighlighter::setDocument(quickDocument->textDocument());
     } else {
@@ -273,100 +275,153 @@ void CppHighlighter::clearBracketMatches()
     }
 }
 
-int CppHighlighter::findMatchingBracket(const QString &docText, int index, QChar openChar, QChar closeChar, bool forward)
+// mask[i] is true where text[i] is real code (not inside a string or comment).
+// Uses the same rules as applyCommentFormats(), and the previous block's state
+// to know whether this block starts inside a /* */ comment.
+void CppHighlighter::codeMask(const QTextBlock &block, QList<bool> &mask) const
 {
-    int depth = 0;
-    int step = forward ? 1 : -1;
-    int i = index;
+    const QString text = block.text();
+    const int n = text.length();
+    mask.fill(true, n);
 
-    while (i >= 0 && i < docText.length()) {
-        QChar c = docText.at(i);
-        if (c == openChar) {
-            depth++;
-        } else if (c == closeChar) {
-            depth--;
-            if (depth == 0) {
-                return i;
+    const bool hasBlock = !m_blockStartToken.isEmpty();
+    const QTextBlock prev = block.previous();
+    bool inBlock = hasBlock && prev.isValid() && prev.userState() == 1;
+    const QStringView view(text);
+    int i = 0;
+
+    auto kill = [&mask](int from, int to) {
+        for (int k = from; k < to; ++k) mask[k] = false;
+    };
+
+        while (i < n) {
+            if (inBlock) {
+                const int end = text.indexOf(m_blockEndToken, i);
+                if (end == -1) { kill(i, n); return; }
+                const int stop = end + m_blockEndToken.length();
+                kill(i, stop);
+                i = stop;
+                inBlock = false;
+                continue;
+            }
+
+            const QChar c = text.at(i);
+            if (c == QLatin1Char('"') || c == QLatin1Char('\'')) {
+                int j = i + 1;
+                while (j < n && text.at(j) != c) {
+                    if (text.at(j) == QLatin1Char('\\')) ++j;
+                    ++j;
+                }
+                const int stop = qMin(j + 1, n);
+                kill(i, stop);
+                i = stop;
+                continue;
+            }
+
+            if (hasBlock && view.mid(i, m_blockStartToken.length()) == m_blockStartToken) {
+                kill(i, i + m_blockStartToken.length());
+                i += m_blockStartToken.length();
+                inBlock = true;
+                continue;
+            }
+
+            if (view.mid(i, m_lineCommentToken.length()) == m_lineCommentToken) {
+                kill(i, n);
+                return;
+            }
+            ++i;
+        }
+}
+
+// Document position of the bracket matching the one at (block, col), or -1.
+int CppHighlighter::findPartner(QTextBlock block, int col) const
+{
+    static const QString opens = QStringLiteral("([{");
+    static const QString closes = QStringLiteral(")]}");
+
+    const QChar same = block.text().at(col);
+    const int oi = opens.indexOf(same);
+    const bool forward = oi >= 0;
+    const QChar other = forward ? closes.at(oi) : opens.at(closes.indexOf(same));
+    const int step = forward ? 1 : -1;
+
+    constexpr int kMaxScan = 200000;   // characters; keeps huge files responsive
+    int scanned = 0;
+    int depth = 0;
+    bool first = true;
+
+    while (block.isValid()) {
+        const QString t = block.text();
+        QList<bool> mask;
+        codeMask(block, mask);
+
+        int i = first ? col : (forward ? 0 : t.length() - 1);
+        for (; i >= 0 && i < t.length(); i += step) {
+            if (!mask.at(i)) continue;
+            const QChar c = t.at(i);
+            if (c == same) {
+                ++depth;
+            } else if (c == other) {
+                if (--depth == 0)
+                    return block.position() + i;
             }
         }
-        i += step;
+
+        scanned += t.length() + 1;
+        if (scanned > kMaxScan) return -1;
+        first = false;
+        block = forward ? block.next() : block.previous();
     }
     return -1;
 }
 
 void CppHighlighter::updateBracketMatching()
 {
-    // Bracket matching is currently disabled (kept as in the original code).
-    // Remove this early return to re-enable it.
-    return;
+    const int oldPos1 = m_matchedBracket1;
+    const int oldPos2 = m_matchedBracket2;
+    int new1 = -1;
+    int new2 = -1;
 
-    // Save previous matched bracket positions so we can clear their highlights
-    int oldPos1 = m_matchedBracket1;
-    int oldPos2 = m_matchedBracket2;
+    QTextDocument *doc = document();
+    if (doc && m_cursorPosition >= 0) {
+        // Like Kate: the bracket under the caret first, then the one before it
+        const int candidates[2] = { m_cursorPosition, m_cursorPosition - 1 };
+        for (int cand : candidates) {
+            if (cand < 0 || cand >= doc->characterCount() - 1) continue;
+            const QTextBlock b = doc->findBlock(cand);
+            if (!b.isValid()) continue;
 
-    m_matchedBracket1 = -1;
-    m_matchedBracket2 = -1;
+            const int col = cand - b.position();
+            const QString t = b.text();
+            if (col < 0 || col >= t.length()) continue;
 
-    auto refreshBlocks = [this](int pos1, int pos2) {
-        if (!document()) return;
-        if (pos1 >= 0) {
-            QTextBlock b = document()->findBlock(pos1);
-            if (b.isValid()) rehighlightBlock(b);
+            const QChar ch = t.at(col);
+            if (QStringLiteral("()[]{}").indexOf(ch) == -1) continue;
+
+            QList<bool> mask;
+            codeMask(b, mask);
+            if (!mask.at(col)) continue;       // bracket is inside a string/comment
+
+            const int partner = findPartner(b, col);
+            if (partner != -1) {
+                new1 = cand;
+                new2 = partner;
+                break;
+            }
         }
-        if (pos2 >= 0) {
-            QTextBlock b = document()->findBlock(pos2);
-            if (b.isValid()) rehighlightBlock(b);
-        }
-    };
+    }
 
-    if (!document()) {
-        refreshBlocks(oldPos1, oldPos2);
+    if (new1 == oldPos1 && new2 == oldPos2)
         return;
-    }
 
-    QString docText = document()->toPlainText();
-    if (docText.isEmpty()) {
-        refreshBlocks(oldPos1, oldPos2);
-        return;
-    }
+    m_matchedBracket1 = new1;
+    m_matchedBracket2 = new2;
 
-    int checkPos = -1;
-
-    // Check character directly under cursor or directly before cursor
-    if (m_cursorPosition < docText.length()) {
-        QChar ch = docText.at(m_cursorPosition);
-        if (ch == '{' || ch == '}' || ch == '(' || ch == ')' || ch == '[' || ch == ']') {
-            checkPos = m_cursorPosition;
-        }
-    }
-    if (checkPos == -1 && m_cursorPosition > 0 && m_cursorPosition <= docText.length()) {
-        QChar prevCh = docText.at(m_cursorPosition - 1);
-        if (prevCh == '{' || prevCh == '}' || prevCh == '(' || prevCh == ')' || prevCh == '[' || prevCh == ']') {
-            checkPos = m_cursorPosition - 1;
-        }
-    }
-
-    if (checkPos != -1) {
-        QChar ch = docText.at(checkPos);
-        int partner = -1;
-
-        if (ch == '{') partner = findMatchingBracket(docText, checkPos, '{', '}', true);
-        else if (ch == '}') partner = findMatchingBracket(docText, checkPos, '}', '{', false);
-        else if (ch == '(') partner = findMatchingBracket(docText, checkPos, '(', ')', true);
-        else if (ch == ')') partner = findMatchingBracket(docText, checkPos, ')', '(', false);
-        else if (ch == '[') partner = findMatchingBracket(docText, checkPos, '[', ']', true);
-        else if (ch == ']') partner = findMatchingBracket(docText, checkPos, ']', '[', false);
-
-        if (partner != -1) {
-            m_matchedBracket1 = checkPos;
-            m_matchedBracket2 = partner;
-        }
-    }
-
-    // Only repaint if the matched positions actually changed
-    if (oldPos1 != m_matchedBracket1 || oldPos2 != m_matchedBracket2) {
-        refreshBlocks(oldPos1, oldPos2);
-        refreshBlocks(m_matchedBracket1, m_matchedBracket2);
+    if (!doc) return;
+    for (int pos : { oldPos1, oldPos2, new1, new2 }) {
+        if (pos < 0) continue;
+        const QTextBlock b = doc->findBlock(pos);
+        if (b.isValid()) rehighlightBlock(b);
     }
 }
 
