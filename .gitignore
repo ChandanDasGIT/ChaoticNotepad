@@ -4,6 +4,7 @@ bin/
 lib/
 AppDir/
 dist/
+tools/
 
 # Release archives & packaged binaries
 *.tar.xz
