@@ -2,19 +2,34 @@
 
 A modern, minimalist cross-platform text and code editor built with C++ and Qt6 QML.
 
+## Features
+
+- **Tabbed Interface:** Manage multiple open documents seamlessly.
+- **Syntax Highlighting:** Clean highlighting for C++ and various text formats.
+- **Minimap:** Quick document overview and navigation.
+- **Find & Replace:** Fast regex-enabled text searching.
+- **Custom Palette:** Polished custom UI styling.
+
+---
+
 ## Installation
 
 ### Install from Pre-Compiled Release (Recommended)
 
-1. Download `ChaoticNotepad-v1.0-linux-x86_64.tar.xz` from the **Releases** page.
+1. Download `ChaoticNotepad-1.0-linux-x86_64.tar.xz` from the **Releases** page.
 2. Extract the archive and run the binary installer:
 
 ```bash
-tar -xf ChaoticNotepad-v1.0-linux-x86_64.tar.xz
+tar -xf ChaoticNotepad-1.0-linux-x86_64.tar.xz
 cd ChaoticNotepad-linux-x86_64
 chmod +x install-app.sh
 sudo ./install-app.sh
 ```
+
+### Install from Pre-Compiled Release (Recommended)
+
+1. Download `ChaoticNotepad-1.0-x86_64.AppImage` from the **Releases** page.
+2. run the AppImage
 
 ### Build and Install from Source (Alternative)
 
