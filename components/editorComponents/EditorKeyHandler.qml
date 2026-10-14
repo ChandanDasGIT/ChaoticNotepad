@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick
 import NotepadQtQuick
 
 QtObject {
@@ -21,6 +20,15 @@ QtObject {
 
     function isWordCh(c) {
         return c !== "" && (/[A-Za-z0-9_]/.test(c) || c.charCodeAt(0) > 127);
+    }
+
+    // Deletes the main caret's selection (if any). Returns the new caret position, or -1 if nothing was selected.
+    function dropSelection() {
+        var s = editor.selectionStart, e = editor.selectionEnd;
+        if (s === e) return -1;
+        editor.remove(s, e);
+        editor.cursorPosition = s;
+        return s;
     }
 
     function handleMultiCursorKey(event) {
@@ -53,8 +61,13 @@ QtObject {
             }
         }
 
-        if (event.key === Qt.Key_Backspace && !(mods & blocked)) {
-            editor.cursorPosition = multi.deleteBackward(pos);
+        if ((event.key === Qt.Key_Backspace || event.key === Qt.Key_Delete) && !(mods & blocked)
+            && dropSelection() >= 0) {
+            event.accepted = true;      // the selection was the deletion
+            return true;
+            }
+            if (event.key === Qt.Key_Backspace && !(mods & blocked)) {
+                editor.cursorPosition = multi.deleteBackward(pos);
             event.accepted = true;
             return true;
         }
@@ -63,6 +76,15 @@ QtObject {
             event.accepted = true;
             return true;
         }
+
+        var isTyping = !(mods & blocked) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+        || event.key === Qt.Key_Tab
+        || (event.text.length === 1 && event.text.charCodeAt(0) >= 32));
+        if (isTyping) {
+            var dropped = dropSelection();
+            if (dropped >= 0) pos = dropped;
+        }
+
         if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(mods & blocked)) {
             editor.cursorPosition = multi.insertNewline(pos);
             event.accepted = true;
@@ -86,6 +108,8 @@ QtObject {
     }
 
     function handleKeyPress(event) {
+        if (multi && multi.active && handleMultiCursorKey(event)) return;
+
         // Fast path: keys that none of the editing features care about skip the text copy
         var k = event.key, m = event.modifiers;
         var needsText = ((m === Qt.AltModifier) && (k === Qt.Key_Up || k === Qt.Key_Down))
@@ -94,6 +118,9 @@ QtObject {
         || k === Qt.Key_Return || k === Qt.Key_Enter
         || (event.text.length === 1 && "(){}[]\"'".indexOf(event.text) !== -1);
         if (!needsText) return;
+
+        var pos = editor.cursorPosition;
+        var doc = editor.text;
 
         // 1. Move Lines Up / Down: Alt + Up / Alt + Down
         if (event.modifiers === Qt.AltModifier && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
@@ -179,11 +206,13 @@ QtObject {
                 editor.select(rStart, rEnd + netOffsetChange);
             } else {
                 if (isShift) {
+                    // De-indent the current line: remove up to 4 leading spaces (or one tab) from its start
                     var sIdx = lineStartOf(doc, pos);
-                    var linePrefix = doc.substring(sIdx, pos);
-                    var spacesToRemove = linePrefix.match(/( {1,4}|\t)$/);
-                    if (spacesToRemove) {
-                        editor.remove(pos - spacesToRemove[0].length, pos);
+                    var lineLead = doc.substring(sIdx, sIdx + 4).match(/^( {1,4}|\t)/);
+                    if (lineLead) {
+                        var removeLen = lineLead[0].length;
+                        editor.remove(sIdx, sIdx + removeLen);
+                        editor.cursorPosition = Math.max(sIdx, pos - removeLen);
                     }
                 } else {
                     editor.insert(pos, "    ");

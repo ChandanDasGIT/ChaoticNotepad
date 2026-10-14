@@ -23,13 +23,64 @@ Rectangle {
         z: 2
     }
 
+    // "+" is pinned to the right edge and never scrolls away
+    Rectangle {
+        id: plusButton
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: 34
+        color: root.appPalette.tabBg
+        z: 3
+
+        Text {
+            anchors.centerIn: parent
+            text: "+"
+            font.pixelSize: 18
+            color: plusHover.hovered ? root.appPalette.iconHover : root.appPalette.iconNormal
+        }
+
+        HoverHandler { id: plusHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: root.newTabRequested() }
+    }
+
     ListView {
         id: tabsListView
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.right: plusButton.left
         orientation: ListView.Horizontal
         boundsBehavior: Flickable.StopAtBounds
         clip: true
         model: root.tabsModel
+
+        readonly property real maxX: Math.max(0, contentWidth - width)
+
+        ScrollBar.horizontal: ScrollBar {
+            id: tabScroll
+            policy: tabsListView.contentWidth > tabsListView.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+            height: 4
+            z: 5
+            contentItem: Rectangle {
+                implicitHeight: 4
+                radius: 2
+                color: root.appPalette.textMuted
+                opacity: tabScroll.pressed || tabScroll.hovered ? 0.8 : 0.4
+            }
+            background: Item {}
+        }
+
+        // Keep the current tab in view (new tab, Ctrl+Tab, restore)
+        function showCurrent() {
+            if (root.currentTabIndex >= 0 && root.currentTabIndex < count)
+                positionViewAtIndex(root.currentTabIndex, ListView.Contain);
+        }
+        Connections {
+            target: root
+            function onCurrentTabIndexChanged() { Qt.callLater(tabsListView.showCurrent); }
+        }
+        onCountChanged: Qt.callLater(showCurrent)
 
         delegate: Rectangle {
             id: tabItem
@@ -105,21 +156,18 @@ Rectangle {
                 onClicked: root.tabSelected(tabItem.index)
             }
         }
+    }
 
-        footer: Rectangle {
-            width: 34
-            height: 36
-            color: "transparent"
+    // Wheel over the tab strip scrolls it sideways. NoButton = clicks still reach the tabs.
+    MouseArea {
+        anchors.fill: tabsListView
+        z: 10
+        acceptedButtons: Qt.NoButton
 
-            Text {
-                anchors.centerIn: parent
-                text: "+"
-                font.pixelSize: 18
-                color: plusHover.hovered ? root.appPalette.iconHover : root.appPalette.iconNormal
-            }
-
-            HoverHandler { id: plusHover; cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: root.newTabRequested() }
+        onWheel: function(wheel) {
+            var d = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.angleDelta.x;
+            tabsListView.contentX = Math.max(0, Math.min(tabsListView.maxX, tabsListView.contentX - d));
+            wheel.accepted = true;
         }
     }
 }

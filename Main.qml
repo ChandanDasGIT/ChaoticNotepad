@@ -213,6 +213,31 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+F"; onActivated: findBar.show(false) }
     Shortcut { sequence: "Ctrl+S"; onActivated: saveActiveFile() }
     Shortcut { sequence: "Ctrl+Shift+S"; onActivated: saveActiveFileAs() }
+
+    Shortcut { sequence: "Ctrl+N"; onActivated: tabs.createTab() }
+    Shortcut { sequence: "Ctrl+O"; onActivated: customFileDialog.openPicker(false) }
+    Shortcut {
+        sequence: "Ctrl+W"
+        onActivated: {
+            tabs.requestCloseTab(tabs.currentIndex);
+            saveSessionState();
+        }
+    }
+    Shortcut {
+        sequence: "Ctrl+Tab"
+        onActivated: {
+            if (tabs.model.count > 1)
+                tabs.selectTab((tabs.currentIndex + 1) % tabs.model.count);
+        }
+    }
+    Shortcut {
+        sequences: ["Ctrl+Shift+Tab", "Ctrl+Backtab"]
+        onActivated: {
+            if (tabs.model.count > 1)
+                tabs.selectTab((tabs.currentIndex - 1 + tabs.model.count) % tabs.model.count);
+        }
+    }
+
     Shortcut { sequence: "Ctrl+Z"; onActivated: { if (codeEditor) codeEditor.textEdit.undo(); } }
     Shortcut { sequence: "Ctrl+Y"; onActivated: { if (codeEditor) codeEditor.textEdit.redo(); } }
     Shortcut { sequence: "Ctrl+Shift+Z"; onActivated: { if (codeEditor) codeEditor.textEdit.redo(); } }
@@ -252,8 +277,9 @@ ApplicationWindow {
 
     Component.onCompleted: {
         restoreSessionIfEnabled();
-        if (typeof initialFileToOpen !== "undefined" && initialFileToOpen !== "") {
-            openFilePath(initialFileToOpen);
+        if (typeof initialFilesToOpen !== "undefined") {
+            for (var f = 0; f < initialFilesToOpen.length; ++f)
+                openFilePath(initialFilesToOpen[f]);
         }
     }
 

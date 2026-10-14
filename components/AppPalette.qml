@@ -31,4 +31,6 @@ QtObject {
     readonly property color barBg: toolbarBg
     readonly property color cardBg: popupBg
     readonly property color hoverBg: isDark ? "#2c313a" : "#eaecef"
+    readonly property color pressedBg: isDark ? "#111215" : "#d6dade"
+    readonly property color switchOffBg: isDark ? "#16181d" : "#c8cdd3"
 }

@@ -119,7 +119,7 @@ void CppHighlighter::buildRules()
 
     // 11. Strings
     m_quotationFormat.setForeground(QColor(dark ? "#98c379" : "#3a8a3d")); // Soft Green
-    rule.pattern = QRegularExpression(QStringLiteral("\".*?\"|'.*?'"));
+    rule.pattern = QRegularExpression(QStringLiteral("\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'"));
     rule.format = m_quotationFormat;
     m_highlightingRules.append(rule);
 

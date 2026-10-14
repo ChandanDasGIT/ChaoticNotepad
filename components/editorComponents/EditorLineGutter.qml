@@ -13,8 +13,8 @@ Rectangle {
     property string editorFontFamily: "Monospace"
     property int editorFontSize: 13
 
-    width: 45
-    color: appPalette.editorBg
+    width: Math.ceil(fontMetrics.averageCharacterWidth * 5) + 15
+    color: appPalette.toolbarBg
     z: 1
 
     // One entry per logical line (kept as plain arrays, no per-line objects)

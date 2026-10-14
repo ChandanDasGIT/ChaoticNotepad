@@ -1,0 +1,29 @@
+ChaoticNotepad is a Qt 6 / QML desktop text and code editor for Linux, with a C++ backend.
+
+Editing
+- Tabs, with a dirty marker, an unsaved-changes prompt and a scrollable tab bar. New tabs, closing and tab switching have keyboard shortcuts (Ctrl+N/O/W/Tab).
+- Multi-cursor editing (Alt+click) with one-step undo.
+- Auto-indent, bracket and quote auto-closing, Tab and Shift+Tab indent and de-indent, Alt+Up/Down to move lines, and Ctrl+/ for comments.
+- Undo and redo.
+
+Code features
+- Syntax highlighting for C/C++, QML, JS, Lua and Fish, with dark and light colors and bracket matching.
+- Highlighting of the word under the caret.
+- Sticky scrolling, which keeps the enclosing scope visible at the top.
+- Line-number gutter showing added and modified lines against the file on disk.
+- Minimap with a draggable viewport.
+
+Search
+- Find and replace with whole-word toggle, "n of m" counter, Enter and Shift+Enter navigation, and Esc to close.
+- Replace one or replace all.
+
+Files
+- Safe atomic saves (`QSaveFile`) that preserve each file's line endings (LF or CRLF).
+- Save and Save As, with a warning if the target is already open in another tab.
+- Custom file dialog that accepts typed absolute and `~` paths.
+- Detects external changes to open files, with a reload banner.
+- Drag-and-drop to open files, command-line file opening, and session restore.
+
+App
+- Dark and light themes, zoom (Ctrl +/−/0), and font family and size in a settings dialog.
+- Handles large files, with a virtualized line gutter and a lighter highlighter.
