@@ -85,9 +85,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ChaoticNotepad.desktop")
     )
 endif()
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ChaoticNotepad.png")
-    install(FILES ChaoticNotepad.png
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ChaoticNotepad.svg")
+    install(FILES ChaoticNotepad.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
     )
 endif()
 
