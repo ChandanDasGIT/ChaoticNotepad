@@ -127,10 +127,25 @@ Rectangle {
 
                 Rectangle {
                     width: 3
-                    height: parent.height
                     anchors.right: parent.right
                     visible: row.valid && root.lineStates[row.lineIdx] > 0
                     color: root.lineStates[row.lineIdx] === 1 ? "#e67e22" : "#2ecc71"
+
+                    // Reaches down to the start of the next line, so neighbouring bars join up
+                    // (and a wrapped line gets one bar covering all its visual rows)
+                    height: {
+                        root.layoutVersion;
+                        if (!row.valid) return 0;
+                        var top = root.editor.positionToRectangle(root.lineOffsets[row.lineIdx]).y;
+                        var bottom;
+                        if (row.lineIdx + 1 < root.lineCount) {
+                            bottom = root.editor.positionToRectangle(root.lineOffsets[row.lineIdx + 1]).y;
+                        } else {
+                            var endRect = root.editor.positionToRectangle(root.editor.length);
+                            bottom = endRect.y + endRect.height;
+                        }
+                        return Math.max(fontMetrics.height, bottom - top);
+                    }
                 }
 
                 Text {
