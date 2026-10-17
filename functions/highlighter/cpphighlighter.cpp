@@ -1,6 +1,7 @@
 #include "cpphighlighter.h"
 #include <QTextDocument>
 #include <QTextBlock>
+#include <QFileInfo>
 
 CppHighlighter::CppHighlighter(QObject *parent)
 : QSyntaxHighlighter(parent)
@@ -37,7 +38,17 @@ void CppHighlighter::buildRules()
         QStringLiteral("\\bthrow\\b"), QStringLiteral("\\busing\\b"), QStringLiteral("\\bco_await\\b"),
         QStringLiteral("\\bco_yield\\b"), QStringLiteral("\\bco_return\\b"), QStringLiteral("\\brequires\\b"),
         QStringLiteral("\\bconcept\\b"), QStringLiteral("\\bimport\\b"), QStringLiteral("\\bmodule\\b"),
-        QStringLiteral("\\bfunction\\b")
+                QStringLiteral("\\bfunction\\b"),
+        QStringLiteral("\\bstring\\b"), QStringLiteral("\\bforeach\\b"), QStringLiteral("\\bin\\b"),
+        QStringLiteral("\\binternal\\b"), QStringLiteral("\\breadonly\\b"), QStringLiteral("\\boverride\\b"),
+        QStringLiteral("\\bsealed\\b"), QStringLiteral("\\babstract\\b"), QStringLiteral("\\basync\\b"),
+        QStringLiteral("\\bawait\\b"), QStringLiteral("\\bnull\\b"), QStringLiteral("\\btrue\\b"),
+        QStringLiteral("\\bfalse\\b"), QStringLiteral("\\bis\\b"), QStringLiteral("\\bas\\b"),
+        QStringLiteral("\\bout\\b"), QStringLiteral("\\bref\\b"), QStringLiteral("\\bget\\b"),
+        QStringLiteral("\\bset\\b"), QStringLiteral("\\bthis\\b"), QStringLiteral("\\bbase\\b"),
+        QStringLiteral("\\binterface\\b"), QStringLiteral("\\bobject\\b"), QStringLiteral("\\bdecimal\\b"),
+        QStringLiteral("\\bbyte\\b"), QStringLiteral("\\bfloat\\b"), QStringLiteral("\\bchecked\\b"),
+        QStringLiteral("\\block\\b"), QStringLiteral("\\bvalue\\b")
     };
     // One combined regex instead of ~60 separate ones: "\bchar\b" -> "char"
     QStringList keywordWords;
@@ -157,9 +168,24 @@ void CppHighlighter::setFilePath(const QString &path)
     emit filePathChanged();
 
     const QString p = path.toLower();
-    Language lang = Language::Cpp;
-    if (p.endsWith(QStringLiteral(".lua")))       lang = Language::Lua;
-    else if (p.endsWith(QStringLiteral(".fish"))) lang = Language::Fish;
+    const QString fileName = QFileInfo(path).fileName().toLower();
+    Language lang = Language::Plain;
+    if (p.endsWith(QStringLiteral(".lua"))) {
+        lang = Language::Lua;
+    } else if (p.endsWith(QStringLiteral(".fish"))) {
+        lang = Language::Fish;
+    } else if (fileName == QLatin1String("cmakelists.txt")) {
+        lang = Language::CMake;
+    } else {
+        static const QStringList cppLike = {
+            QStringLiteral(".cpp"), QStringLiteral(".h"),   QStringLiteral(".hpp"),
+            QStringLiteral(".cc"),  QStringLiteral(".cxx"), QStringLiteral(".cs"),
+            QStringLiteral(".qml"), QStringLiteral(".js"),  QStringLiteral(".mjs")
+        };
+        for (const QString &ext : cppLike) {
+            if (p.endsWith(ext)) { lang = Language::Cpp; break; }
+        }
+    }
 
     if (lang != m_language) {
         m_language = lang;
@@ -192,6 +218,16 @@ void CppHighlighter::applyLanguage()
             break;
         case Language::Fish:
             m_lineCommentToken = QStringLiteral("#");
+            m_blockStartToken.clear();
+            m_blockEndToken.clear();
+            break;
+        case Language::CMake:
+            m_lineCommentToken = QStringLiteral("#");
+            m_blockStartToken  = QStringLiteral("#[[");
+            m_blockEndToken    = QStringLiteral("]]");
+            break;
+        case Language::Plain:
+            m_lineCommentToken.clear();
             m_blockStartToken.clear();
             m_blockEndToken.clear();
             break;
@@ -325,7 +361,8 @@ void CppHighlighter::codeMask(const QTextBlock &block, QList<bool> &mask) const
                 continue;
             }
 
-            if (view.mid(i, m_lineCommentToken.length()) == m_lineCommentToken) {
+            if (!m_lineCommentToken.isEmpty()
+                && view.mid(i, m_lineCommentToken.length()) == m_lineCommentToken) {
                 kill(i, n);
                 return;
             }
@@ -485,16 +522,21 @@ void CppHighlighter::applyCommentFormats(const QString &text)
 void CppHighlighter::highlightBlock(const QString &text)
 {
     // 1. Normal syntax coloring rules
-    for (const HighlightingRule &rule : std::as_const(m_highlightingRules)) {
-        QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
-        while (matchIterator.hasNext()) {
-            QRegularExpressionMatch match = matchIterator.next();
-            setFormat(match.capturedStart(), match.capturedLength(), rule.format);
+    if (m_language == Language::Plain) {
+        setCurrentBlockState(0);   // no syntax coloring; word and bracket highlight happen below
+    } else {
+        // 1. Normal syntax coloring rules
+        for (const HighlightingRule &rule : std::as_const(m_highlightingRules)) {
+            QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
+            while (matchIterator.hasNext()) {
+                QRegularExpressionMatch match = matchIterator.next();
+                setFormat(match.capturedStart(), match.capturedLength(), rule.format);
+            }
         }
-    }
 
-    // 2. Comments last, so they override every rule above
-    applyCommentFormats(text);
+        // 2. Comments last, so they override every rule above
+        applyCommentFormats(text);
+    }
 
     // 3. Word occurrence highlighting (background only, keeps the text color)
     if (!m_wordRegex.pattern().isEmpty() && text.contains(m_highlightedWord)) {

@@ -27,3 +27,61 @@ Files
 App
 - Dark and light themes, zoom (Ctrl +/−/0), and font family and size in a settings dialog.
 - Handles large files, with a virtualized line gutter and a lighter highlighter.
+
+----------------------
+----- Claude Gen -----
+----------------------
+
+ChaoticNotepad: feature summary
+
+Files and tabs
+
+Multiple documents in tabs. Tabs scroll sideways with the mouse wheel, show a dirty dot (•) when unsaved, and have a close button and a pinned “+” button.
+Each tab has its own editor, so each keeps its own undo history.
+Open, Save and Save As, with an in-app file picker. The picker has Up navigation, a typed path field, ~ expansion, a hidden-files toggle (Ctrl+H) and double-click to open.
+Opening a file that is already open switches to its tab, even if the path reaches it through a symlink or ...
+Saving over an existing file asks “Replace existing file?” first, and saving to a file that is open in another tab is blocked.
+Drag and drop files onto the window to open them. Files given on the command line also open (%F and %U from the desktop entry work).
+Unsaved-changes prompt on closing a tab or the window, with Save, Don’t Save and Cancel. Enter saves and Ctrl+D discards.
+Session restore (optional) reopens the previous tabs.
+A banner offers Reload or Ignore when a file changes on disk. The app’s own saves don’t trigger it.
+
+File safety
+
+Files are saved atomically through a temp file.
+It only opens valid UTF-8 text. Binary files and files over 20 MB are refused with an error message instead of being corrupted.
+CRLF or LF line endings are detected on open and restored on save. A single trailing newline is ensured on save.
+Errors show in a banner at the bottom that you can click to dismiss.
+
+Editing
+
+Multi-cursor: Alt+click adds carets. Typing, Enter, Tab, Backspace, Delete and arrow, Home and End movement apply to all of them in one undo step. Esc or a normal click goes back to a single caret.
+Move lines up or down with Alt+Up or Alt+Down, including multi-line selections.
+Tab and Shift+Tab indent and de-indent a line or a selection by 4 spaces.
+Ctrl+/ toggles line comments. The comment token depends on the file type: //, #, --, ;, or none for txt, md, json and similar.
+Ctrl+D duplicates the current line or selection.
+Smart indent on Enter, with extra indentation between { and }.
+Brackets and quotes auto-close, skip over an existing closer, and wrap a selection. Quotes inside words, as in “don’t”, are left alone.
+Ctrl+Z, Ctrl+Y and Ctrl+Shift+Z for undo and redo, plus Undo and Redo buttons in the toolbar.
+
+Find and replace
+
+Find bar (Ctrl+F) with a live “n of m” counter, Next and Previous (Enter and Shift+Enter), and a whole-word toggle.
+Replace and Replace All. Replace All is a single undo step.
+Case-insensitive matching.
+
+Code view
+
+Syntax highlighting for C/C++, QML, JS, Lua and Fish. It has dark and light colour sets and handles block comments across lines.
+Matching-bracket highlighting, ignoring brackets inside strings and comments.
+Highlights other occurrences of a selected word.
+Sticky scroll pins up to 5 enclosing scope headers at the top. Clicking one jumps to it, and Shift+click selects the whole scope.
+Line-number gutter with change bars: orange for unsaved changes and green for lines changed since the file was opened.
+Minimap on the right, coloured like the syntax. Click or drag it to scroll, and it shows the visible viewport.
+
+Appearance and settings
+
+Settings dialog with editor font (monospace families only), font size (8–36), dark or light theme, and the restore-session toggle. All of these persist between runs.
+Zoom with Ctrl+=, Ctrl++, Ctrl+- and Ctrl+Wheel, and reset with Ctrl+0.
+Window title shows the file name and a * when it has unsaved changes.
+Tab switching with Ctrl+Tab and Ctrl+Shift+Tab. Other shortcuts are Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S and Ctrl+W.

@@ -179,26 +179,8 @@ Item {
             if (!editor.textDocument) return;
 
             highlighter.filePath = root.currentFilePath;
-
-            var path = root.currentFilePath.toLowerCase();
-            var isSupported = path.endsWith(".cpp")  ||
-                              path.endsWith(".h")    ||
-                              path.endsWith(".hpp")  ||
-                              path.endsWith(".qml")  ||
-                              path.endsWith(".cc")   ||
-                              path.endsWith(".cxx")  ||
-                              path.endsWith(".lua")  ||
-                              path.endsWith(".js")   ||
-                              path.endsWith(".fish")   ||
-                              path.endsWith(".mjs");
-
-            if (isSupported) {
-                highlighter.setDocument(editor.textDocument);
-                highlighter.cursorPosition = editor.cursorPosition;
-            } else {
-                highlighter.clearBracketMatches();
-                highlighter.setDocument(null);
-            }
+            highlighter.setDocument(editor.textDocument);
+            highlighter.cursorPosition = editor.cursorPosition;
         }
 
         Connections {

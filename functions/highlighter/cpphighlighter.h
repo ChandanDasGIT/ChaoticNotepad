@@ -48,7 +48,7 @@ protected:
     void highlightBlock(const QString &text) override;
 
 private:
-    enum class Language { Cpp, Lua, Fish };
+    enum class Language { Cpp, Lua, Fish, CMake, Plain };
 
     struct HighlightingRule {
         QRegularExpression pattern;
@@ -71,7 +71,7 @@ private:
     QTextCharFormat m_numberFormat;
     QTextCharFormat m_preprocessorFormat;
 
-    Language m_language = Language::Cpp;
+    Language m_language = Language::Plain;
     QString m_filePath;
 
     bool m_isDark = true;
