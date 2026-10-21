@@ -16,14 +16,16 @@ A modern, minimalist cross-platform text and code editor built with C++ and Qt6 
 
 ### Install from Pre-Compiled Release (Recommended)
 
-1. Download `ChaoticNotepad-1.0-linux-x86_64.tar.xz` from the **Releases** page.
-2. Extract the archive and run the binary installer:
+1. Download `.tar.xz` file from the **Releases** page.
+2. Extract the archive, go to the extracted folder(in the tarminal) and simply run :
 
 ```bash
-tar -xf ChaoticNotepad-1.0-linux-x86_64.tar.xz
-cd ChaoticNotepad-linux-x86_64
-chmod +x install-app.sh
-sudo ./install-app.sh
+ ./install-app.sh
+```
+3. To uninstall, go to the extracted folder(in the tarminal) and simply run :
+
+```bash
+ ./uninstall-app.sh
 ```
 
 ### Install from Pre-Compiled Release (Recommended)
