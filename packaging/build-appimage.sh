@@ -10,8 +10,6 @@ export VERSION
 export APPIMAGE_EXTRACT_AND_RUN=1      # lets linuxdeploy run without FUSE
 export NO_STRIP=1                      # linuxdeploy's old strip can't read newer Fedora libraries
 export QML_SOURCES_PATHS="$ROOT"       # bundle every QML module your .qml files import
-export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so;libqwayland-egl.so"   # also bundle Wayland, not just xcb
-export EXTRA_QT_PLUGINS="waylandcompositor"   # pulls in wayland-graphic-integration-client (needed for OpenGL on Wayland)
 export EXTRA_QT_MODULES="waylandcompositor"   # older name of the same setting, harmless if ignored
 
 # linuxdeploy's Qt plugin needs to know where qmake is (distros name it differently)
@@ -43,18 +41,35 @@ cmake --build build-release
 DESKTOP_DESTDIR="$ROOT/AppDir"
 DESTDIR="$DESKTOP_DESTDIR" cmake --install build-release
 
-# Create the AppImage
+# Deploy Qt and its dependencies into AppDir (no AppImage yet)
 linuxdeploy-x86_64.AppImage \
   --appdir AppDir \
   --plugin qt \
   --desktop-file ChaoticNotepad.desktop \
-  --icon-file ChaoticNotepad.svg \
-  --output appimage
+  --icon-file ChaoticNotepad.svg
 
-# Fail the build if the Wayland pieces didn't get bundled, so a broken release can't ship
+# linuxdeploy's Qt plugin skips the Qt 6 name of the Wayland OpenGL plugin folder, so copy it by hand
+QT_PLUGIN_DIR="$("$QMAKE" -query QT_INSTALL_PLUGINS)"
+QT_LIB_DIR="$("$QMAKE" -query QT_INSTALL_LIBS)"
+found=""
+for d in wayland-graphics-integration-client wayland-graphic-integration-client; do
+  if [ -d "$QT_PLUGIN_DIR/$d" ]; then
+    mkdir -p AppDir/usr/plugins
+    cp -a "$QT_PLUGIN_DIR/$d" AppDir/usr/plugins/
+    found="$d"
+  fi
+done
+[ -n "$found" ] || { echo "No wayland graphics integration plugin found in $QT_PLUGIN_DIR:" >&2; ls "$QT_PLUGIN_DIR" >&2; exit 1; }
+cp -a "$QT_LIB_DIR"/libQt6WaylandEglClientHwIntegration.so* AppDir/usr/lib/ \
+  || { echo "libQt6WaylandEglClientHwIntegration not found in $QT_LIB_DIR" >&2; exit 1; }
+
+# Fail the build if the Wayland pieces are missing, so a broken release can't ship
 [ -f AppDir/usr/plugins/platforms/libqwayland-generic.so ] || { echo "Wayland platform plugin was not bundled" >&2; exit 1; }
 [ -d AppDir/usr/plugins/wayland-shell-integration ] || { echo "wayland-shell-integration was not bundled" >&2; exit 1; }
-[ -d AppDir/usr/plugins/wayland-graphic-integration-client ] || { echo "wayland-graphic-integration-client was not bundled" >&2; exit 1; }
+[ -d AppDir/usr/plugins/wayland-graphics-integration-client ] || { echo "wayland-graphics-integration-client was not bundled" >&2; exit 1; }
+
+# Now pack the AppImage
+linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
 
 APPIMAGE="dist/ChaoticNotepad-${VERSION}-x86_64.AppImage"
 mv ChaoticNotepad*.AppImage "$APPIMAGE"
