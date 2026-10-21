@@ -468,8 +468,10 @@ ApplicationWindow {
 
                 onDropped: function(drop) {
                     if (drop.hasUrls) {
-                        for (var i = 0; i < drop.urls.length; ++i)
-                            openFilePath(drop.urls[i]);
+                        for (var i = 0; i < drop.urls.length; ++i) {
+                            if (FileIO.isOpenableDropUrl(drop.urls[i]))
+                                openFilePath(drop.urls[i]);
+                        }
                         drop.acceptProposedAction();
                     }
                 }

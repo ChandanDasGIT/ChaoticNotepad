@@ -10,6 +10,7 @@ export VERSION
 export APPIMAGE_EXTRACT_AND_RUN=1      # lets linuxdeploy run without FUSE
 export NO_STRIP=1                      # linuxdeploy's old strip can't read newer Fedora libraries
 export QML_SOURCES_PATHS="$ROOT"       # bundle every QML module your .qml files import
+export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so;libqwayland-egl.so"   # also bundle Wayland, not just xcb
 
 # linuxdeploy's Qt plugin needs to know where qmake is (distros name it differently)
 if [ -z "${QMAKE:-}" ]; then
@@ -47,6 +48,10 @@ linuxdeploy-x86_64.AppImage \
   --icon-file ChaoticNotepad.svg \
   --output appimage
 
+  # Fail the build if the Wayland plugin didn't get bundled, so a broken release can't ship
+[ -f AppDir/usr/plugins/platforms/libqwayland-generic.so ] || { echo "Wayland platform plugin was not bundled" >&2; exit 1; }
+[ -d AppDir/usr/plugins/wayland-shell-integration ] || echo "Warning: wayland-shell-integration plugin folder missing" >&2
+
 APPIMAGE="dist/ChaoticNotepad-${VERSION}-x86_64.AppImage"
 mv ChaoticNotepad*.AppImage "$APPIMAGE"
 
@@ -55,8 +60,8 @@ mv ChaoticNotepad*.AppImage "$APPIMAGE"
   "../$APPIMAGE" --appimage-extract >/dev/null
   DIRNAME="ChaoticNotepad-${VERSION}-linux-x86_64"
   mv squashfs-root "$DIRNAME"
-  cp "$ROOT/packaging/install-app.sh" "$DIRNAME/install-app.sh"
-  chmod +x "$DIRNAME/install-app.sh"
+  cp "$ROOT/packaging/install-app.sh" "$ROOT/packaging/uninstall-app.sh" "$DIRNAME/"
+  chmod +x "$DIRNAME/install-app.sh" "$DIRNAME/uninstall-app.sh"
   tar -cJf "$DIRNAME.tar.xz" "$DIRNAME"
   rm -rf "$DIRNAME"
   sha256sum * > SHA256SUMS.txt )

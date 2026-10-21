@@ -117,4 +117,4 @@ case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
   *) echo "  Note: $BIN_DIR is not in your PATH, so the '$APP_NAME' command won't work until you add it." ;;
 esac
-echo "  To uninstall:  $APP_DIR/install-app.sh --uninstall$([ "$SCOPE" = system ] && echo ' --system')"
+echo "  To uninstall:  $APP_DIR/uninstall-app.sh$([ "$SCOPE" = system ] && echo ' --system')"

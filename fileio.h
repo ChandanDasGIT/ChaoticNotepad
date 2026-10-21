@@ -140,6 +140,13 @@ public:
         return urlOrPath;
     }
 
+    // True only for local file:// URLs that point at an existing regular file.
+    // Used by drag and drop to ignore anything that isn't a real file.
+    Q_INVOKABLE bool isOpenableDropUrl(const QUrl &url) const {
+        if (!url.isLocalFile()) return false;
+        return QFileInfo(url.toLocalFile()).isFile();
+    }
+
     // Resolves symlinks and "..", so two spellings of one file compare equal.
     // Falls back to the given path if the file doesn't exist.
     Q_INVOKABLE QString canonicalPath(const QString &path) const {
