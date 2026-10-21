@@ -17,7 +17,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build wget file \
             libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-0 libxcb-cursor0 \
-            libvulkan-dev desktop-file-utils \
+            libvulkan-dev desktop-file-utils patchelf \
             libwayland-client0 libwayland-cursor0 libwayland-egl1 libegl1
 
       - uses: jurplel/install-qt-action@v4

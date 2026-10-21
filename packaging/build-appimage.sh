@@ -10,7 +10,9 @@ export VERSION
 export APPIMAGE_EXTRACT_AND_RUN=1      # lets linuxdeploy run without FUSE
 export NO_STRIP=1                      # linuxdeploy's old strip can't read newer Fedora libraries
 export QML_SOURCES_PATHS="$ROOT"       # bundle every QML module your .qml files import
-export EXTRA_QT_MODULES="waylandcompositor"   # older name of the same setting, harmless if ignored
+export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so;libqwayland-egl.so"   # also bundle Wayland, not just xcb
+export EXTRA_QT_PLUGINS="waylandcompositor"
+export EXTRA_QT_MODULES="waylandcompositor"
 
 # linuxdeploy's Qt plugin needs to know where qmake is (distros name it differently)
 if [ -z "${QMAKE:-}" ]; then
@@ -38,8 +40,7 @@ cmake -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFI
 cmake --build build-release
 
 # Stage into AppDir
-DESKTOP_DESTDIR="$ROOT/AppDir"
-DESTDIR="$DESKTOP_DESTDIR" cmake --install build-release
+DESTDIR="$ROOT/AppDir" cmake --install build-release
 
 # Deploy Qt and its dependencies into AppDir (no AppImage yet)
 linuxdeploy-x86_64.AppImage \
@@ -48,25 +49,53 @@ linuxdeploy-x86_64.AppImage \
   --desktop-file ChaoticNotepad.desktop \
   --icon-file ChaoticNotepad.svg
 
-# linuxdeploy's Qt plugin skips the Qt 6 name of the Wayland OpenGL plugin folder, so copy it by hand
 QT_PLUGIN_DIR="$("$QMAKE" -query QT_INSTALL_PLUGINS)"
 QT_LIB_DIR="$("$QMAKE" -query QT_INSTALL_LIBS)"
-found=""
-for d in wayland-graphics-integration-client wayland-graphic-integration-client; do
-  if [ -d "$QT_PLUGIN_DIR/$d" ]; then
-    mkdir -p AppDir/usr/plugins
-    cp -a "$QT_PLUGIN_DIR/$d" AppDir/usr/plugins/
-    found="$d"
+
+# Show what exists and what got bundled, so the CI log explains any failure below
+echo "== Qt plugins available in $QT_PLUGIN_DIR"
+ls "$QT_PLUGIN_DIR" "$QT_PLUGIN_DIR/platforms"
+echo "== Plugins bundled so far"
+ls AppDir/usr/plugins AppDir/usr/plugins/platforms
+
+# Copy any Wayland plugin linuxdeploy skipped, straight from the Qt install
+mkdir -p AppDir/usr/plugins/platforms AppDir/usr/lib
+for p in libqwayland-generic.so libqwayland-egl.so; do
+  if [ ! -f "AppDir/usr/plugins/platforms/$p" ] && [ -f "$QT_PLUGIN_DIR/platforms/$p" ]; then
+    cp -L "$QT_PLUGIN_DIR/platforms/$p" AppDir/usr/plugins/platforms/
   fi
 done
-[ -n "$found" ] || { echo "No wayland graphics integration plugin found in $QT_PLUGIN_DIR:" >&2; ls "$QT_PLUGIN_DIR" >&2; exit 1; }
-cp -a "$QT_LIB_DIR"/libQt6WaylandEglClientHwIntegration.so* AppDir/usr/lib/ \
-  || { echo "libQt6WaylandEglClientHwIntegration not found in $QT_LIB_DIR" >&2; exit 1; }
+for d in wayland-decoration-client wayland-graphics-integration-client wayland-graphic-integration-client wayland-shell-integration; do
+  if [ ! -d "AppDir/usr/plugins/$d" ] && [ -d "$QT_PLUGIN_DIR/$d" ]; then
+    cp -a "$QT_PLUGIN_DIR/$d" AppDir/usr/plugins/
+  fi
+done
+for lib in libQt6WaylandClient.so.6 libQt6WaylandEglClientHwIntegration.so.6 libQt6WlShellIntegration.so.6; do
+  if [ ! -e "AppDir/usr/lib/$lib" ] && [ -e "$QT_LIB_DIR/$lib" ]; then
+    cp -L "$QT_LIB_DIR/$lib" AppDir/usr/lib/
+  fi
+done
+
+# Make the Wayland plugins and libs find the bundled libraries at runtime
+for so in AppDir/usr/plugins/platforms/libqwayland-*.so AppDir/usr/plugins/wayland-*/*.so; do
+  if [ -f "$so" ]; then patchelf --set-rpath '$ORIGIN/../../lib' "$so"; fi
+done
+for so in AppDir/usr/lib/libQt6Wayland*.so.6 AppDir/usr/lib/libQt6WlShellIntegration.so.6; do
+  if [ -f "$so" ]; then patchelf --set-rpath '$ORIGIN' "$so"; fi
+done
+
+# Print any library the Wayland plugins still can't find (informational)
+for so in AppDir/usr/plugins/platforms/libqwayland-*.so AppDir/usr/plugins/wayland-*/*.so; do
+  if [ -f "$so" ]; then
+    echo "== missing libs for $so:"
+    LD_LIBRARY_PATH="$ROOT/AppDir/usr/lib:$QT_LIB_DIR" ldd "$so" | grep 'not found' || true
+  fi
+done
 
 # Fail the build if the Wayland pieces are missing, so a broken release can't ship
 [ -f AppDir/usr/plugins/platforms/libqwayland-generic.so ] || { echo "Wayland platform plugin was not bundled" >&2; exit 1; }
 [ -d AppDir/usr/plugins/wayland-shell-integration ] || { echo "wayland-shell-integration was not bundled" >&2; exit 1; }
-[ -d AppDir/usr/plugins/wayland-graphics-integration-client ] || { echo "wayland-graphics-integration-client was not bundled" >&2; exit 1; }
+ls -d AppDir/usr/plugins/wayland-graphic*-integration-client >/dev/null 2>&1 || { echo "wayland graphics integration plugin was not bundled" >&2; exit 1; }
 
 # Now pack the AppImage
 linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
