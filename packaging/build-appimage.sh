@@ -11,6 +11,8 @@ export APPIMAGE_EXTRACT_AND_RUN=1      # lets linuxdeploy run without FUSE
 export NO_STRIP=1                      # linuxdeploy's old strip can't read newer Fedora libraries
 export QML_SOURCES_PATHS="$ROOT"       # bundle every QML module your .qml files import
 export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so;libqwayland-egl.so"   # also bundle Wayland, not just xcb
+export EXTRA_QT_PLUGINS="waylandcompositor"   # pulls in wayland-graphic-integration-client (needed for OpenGL on Wayland)
+export EXTRA_QT_MODULES="waylandcompositor"   # older name of the same setting, harmless if ignored
 
 # linuxdeploy's Qt plugin needs to know where qmake is (distros name it differently)
 if [ -z "${QMAKE:-}" ]; then
@@ -38,7 +40,8 @@ cmake -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFI
 cmake --build build-release
 
 # Stage into AppDir
-DESTDIR="$ROOT/AppDir" cmake --install build-release
+DESKTOP_DESTDIR="$ROOT/AppDir"
+DESTDIR="$DESKTOP_DESTDIR" cmake --install build-release
 
 # Create the AppImage
 linuxdeploy-x86_64.AppImage \
@@ -48,9 +51,10 @@ linuxdeploy-x86_64.AppImage \
   --icon-file ChaoticNotepad.svg \
   --output appimage
 
-  # Fail the build if the Wayland plugin didn't get bundled, so a broken release can't ship
+# Fail the build if the Wayland pieces didn't get bundled, so a broken release can't ship
 [ -f AppDir/usr/plugins/platforms/libqwayland-generic.so ] || { echo "Wayland platform plugin was not bundled" >&2; exit 1; }
-[ -d AppDir/usr/plugins/wayland-shell-integration ] || echo "Warning: wayland-shell-integration plugin folder missing" >&2
+[ -d AppDir/usr/plugins/wayland-shell-integration ] || { echo "wayland-shell-integration was not bundled" >&2; exit 1; }
+[ -d AppDir/usr/plugins/wayland-graphic-integration-client ] || { echo "wayland-graphic-integration-client was not bundled" >&2; exit 1; }
 
 APPIMAGE="dist/ChaoticNotepad-${VERSION}-x86_64.AppImage"
 mv ChaoticNotepad*.AppImage "$APPIMAGE"
