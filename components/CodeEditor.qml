@@ -206,7 +206,20 @@ Item {
                 }
             }
         }
-
+        
+        WheelHandler {
+            acceptedModifiers: Qt.NoModifier          // Ctrl+wheel keeps zooming via your MouseArea
+            onWheel: function(event) {
+                var lineH = Math.max(16, root.editorFontSize * 1.5);
+                var step = event.pixelDelta.y !== 0
+                           ? event.pixelDelta.y                       // touchpads: exact pixels
+                           : (event.angleDelta.y / 120) * 3 * lineH;  // mouse: 3 lines per notch
+                var maxY = Math.max(0, editorFlickable.contentHeight - editorFlickable.height);
+                editorFlickable.contentY = Math.max(0, Math.min(maxY, editorFlickable.contentY - step));
+                event.accepted = true;
+            }
+        }
+        
         Item {
             id: containerItem
             width: editorFlickable.width
