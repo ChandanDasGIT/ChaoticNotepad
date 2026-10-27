@@ -93,7 +93,8 @@ QVariant EditorRowsModel::data(const QModelIndex& index, int role) const {
 void EditorRowsModel::refresh(const RowBuilder* builder, const EditorTab* tab) {
     const int now = builder ? static_cast<int>(builder->rowCount()) : 0;
     const int tabId = tab ? tab->id : -1;
-    if (tabId != m_tabId) {                               // another tab: start the list again from scratch
+    const int change = now > m_count ? now - m_count : m_count - now;
+    if (tabId != m_tabId || change > 1) {                 // another tab, or many rows at once: start the list again from scratch
         m_tabId = tabId;
         beginResetModel();
         m_builder = builder;

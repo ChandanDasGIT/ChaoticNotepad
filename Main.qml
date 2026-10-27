@@ -12,6 +12,9 @@ ApplicationWindow {
     title: "ChaoticNotepad"
     color: Theme.editorBg
 
+    // Closing the window (the X, Super+C ...) asks about unsaved tabs first
+    onClosing: (close) => { close.accepted = DialogController.closeRequested() }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0

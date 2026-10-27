@@ -11,10 +11,12 @@ echo "Uninstalling ChaoticNotepad..."
 # Remove binaries (both current and legacy names)
 rm -f /usr/local/bin/ChaoticNotepad
 rm -f /usr/local/bin/appNotepadQtQuick
+rm -f /usr/local/bin/appChaoticNotepad
 
 # Remove desktop entry and icons
 rm -f /usr/local/share/applications/ChaoticNotepad.desktop
 rm -f /usr/local/share/icons/hicolor/256x256/apps/ChaoticNotepad.png
+rm -f /usr/local/share/icons/hicolor/scalable/apps/ChaoticNotepad.svg
 
 # Update desktop & icon caches
 if command -v update-desktop-database &> /dev/null; then

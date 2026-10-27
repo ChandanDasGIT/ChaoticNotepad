@@ -52,7 +52,23 @@ size_t DialogController::indexOfTab(int id) const {
     return tabs.count();
 }
 
-void DialogController::quitApp() { QGuiApplication::quit(); }
+void DialogController::quitApp() {
+    m_quitConfirmed = true;            // quit() asks the window to close: it must not ask about unsaved changes again
+    QGuiApplication::quit();
+}
+
+// The window was asked to close (the X, Super+C ...). Nothing unsaved: let it close. Otherwise show the
+// "unsaved changes" box and keep the window open; the box quits the program when you have answered.
+bool DialogController::closeRequested() {
+    if (m_quitConfirmed) return true;
+    TabManager& tabs = EditorController::instance()->tabs();
+    bool unsaved = false;
+    for (size_t i = 0; i < tabs.count() && !unsaved; ++i)
+        unsaved = tabs.modified(i);
+    if (!unsaved) { m_quitConfirmed = true; return true; }
+    requestQuit();
+    return false;
+}
 
 // ------------------------------------------------------------------ keys and clicks
 

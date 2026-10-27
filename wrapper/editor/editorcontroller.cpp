@@ -76,7 +76,11 @@ void EditorController::rebuild(bool force) {
     m_stickyScroll.setRegionsFromFolds(tab.view.folding().regions(), b);
 
     const size_t room = m_columns > 1 ? m_columns - 1 : 1;     // one cell is kept for the cursor at the end of a line
+    const size_t rowsBefore = m_builder.rowCount();
     m_builder.update(tab, room);
+    const size_t rowsAfter = m_builder.rowCount();
+    const size_t rowsDiff = rowsAfter > rowsBefore ? rowsAfter - rowsBefore : rowsBefore - rowsAfter;
+    const bool bigChange = m_built && tab.id == m_lastTabId && rowsDiff > 1;   // the row lists start again (see EditorRowsModel::refresh)
     m_rows.refresh(&m_builder, &tab);
 
     m_lastTabId = tab.id;
@@ -86,6 +90,7 @@ void EditorController::rebuild(bool force) {
 
     updateSticky();
     emit rowsRebuilt();
+    if (bigChange) emit scrollRequested(static_cast<int>(m_firstRow));   // a list that starts again goes back to the top: put it back
 }
 
 void EditorController::updateSticky() {

@@ -89,10 +89,21 @@ bool Document::open(const std::string& rawPath, TextView& view, std::string& mes
     return true;
 }
 
-bool Document::save(const TextView& view, std::string& message) {
+bool Document::save(TextView& view, std::string& message) {
     if (m_path.empty()) { message = "no file name"; return false; }
 
     std::string text = view.text();
+
+    // Always end the file with a newline (an empty file stays empty). The newline goes into the editor's text too,
+    // so the editor shows exactly what is on disk and the file does not look changed after saving.
+    if (!text.empty() && text.back() != '\n') {
+        const Cursor keep = view.cursors()[view.mainCursorIndex()];
+        view.moveCursor(view.buffer().endPosition());
+        view.insertText("\n");
+        if (keep.hasSelection()) view.select(keep.anchor, keep.pos);
+        else view.moveCursor(keep.pos);
+        text = view.text();
+    }
     std::string out = m_bom ? "\xEF\xBB\xBF" : "";
     if (m_crlf) {
         out.reserve(text.size() + text.size() / 20);
@@ -123,7 +134,7 @@ bool Document::save(const TextView& view, std::string& message) {
     return true;
 }
 
-bool Document::saveAs(const std::string& rawPath, const TextView& view, std::string& message) {
+bool Document::saveAs(const std::string& rawPath, TextView& view, std::string& message) {
     std::string path = FileIO::absolutePath(FileIO::expandPath(rawPath));
     if (path.empty()) { message = "no file name"; return false; }
 

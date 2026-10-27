@@ -40,6 +40,7 @@ public:
     // The questions. The editor calls these.
     void requestClose(size_t tabIndex);                          // closes it, or asks first when it has unsaved changes
     void requestQuit();                                          // quits, or asks first
+    Q_INVOKABLE bool closeRequested();                           // the window was asked to close (X, Super+C): true = let it close, false = the unsaved changes box was shown
     void showSaveConflict(int tabId, const std::string& name);   // "the file changed on disk: overwrite?"
 
 signals:
@@ -67,5 +68,6 @@ private:
     bool m_quitAfterSave = false;
     int m_quitTriedId = 0;
     bool m_advancing = false;
+    bool m_quitConfirmed = false;      // the program decided to quit: the window may close without asking again
     QTimer m_poll;                     // looks for changes made to the open file by other programs
 };

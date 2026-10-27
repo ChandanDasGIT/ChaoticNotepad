@@ -12,8 +12,9 @@ public:
     // On failure the view is left untouched.
     bool open(const std::string& path, TextView& view, std::string& message);
 
-    bool save(const TextView& view, std::string& message);                       // needs a path
-    bool saveAs(const std::string& path, const TextView& view, std::string& message);
+    // Saving ends the file with a newline: it is added to the text in the editor too, so `view` is not const.
+    bool save(TextView& view, std::string& message);                             // needs a path
+    bool saveAs(const std::string& path, TextView& view, std::string& message);
 
     // Looks at how a text is indented: tabs, or spaces (and how many per level). Used when a file is opened,
     // so Tab in that file inserts what the file already uses. No indented lines: 4 spaces.
