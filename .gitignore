@@ -5,6 +5,8 @@ lib/
 AppDir/
 dist/
 tools/
+trial_build/
+squashfs-root/
 
 # Release archives & packaged binaries
 *.tar.xz
@@ -51,3 +53,4 @@ ui_*.h
 .vscode/
 .idea/
 .kateconfig
+*.log
