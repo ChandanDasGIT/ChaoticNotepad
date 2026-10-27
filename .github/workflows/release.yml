@@ -22,7 +22,7 @@ jobs:
 
       - uses: jurplel/install-qt-action@v4
         with:
-          version: '6.5.3'
+          version: '6.10.0'
           cache: true
 
       - name: Build AppImage and tarball

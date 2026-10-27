@@ -1,0 +1,457 @@
+-- The CXX compiler identification is GNU 16.2.1
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Performing Test HAVE_STDATOMIC
+-- Performing Test HAVE_STDATOMIC - Success
+-- Found WrapAtomic: TRUE
+-- Found OpenGL: /usr/lib64/libOpenGL.so
+-- Found WrapOpenGL: TRUE
+-- Found WrapVulkanHeaders: /usr/include
+-- Configuring done (0.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/iusearchbtw/ThisPC/C++ projects/ChaoticNotepad/build-release
+[0/2] Re-checking globbed directories...
+[1/114] Copying appChaoticNotepad qml sources into build dir
+[2/114] Copying appChaoticNotepad qml resources into build dir
+[3/114] Populating .qmlls.ini file at /home/iusearchbtw/ThisPC/C++ projects/ChaoticNotepad/build-release/.qt/.qmlls.build.ini
+[4/114] Automatic MOC and UIC for target textengine
+[5/114] Building CXX object CMakeFiles/textengine.dir/textengine_autogen/mocs_compilation.cpp.o
+[6/114] Running qmlimportscanner for appChaoticNotepad
+[7/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/findpanel/findpanel.cpp.o
+[8/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/cmakesyntax.cpp.o
+[9/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/gutter/gutter.cpp.o
+[10/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/luasyntax.cpp.o
+[11/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/jssyntax.cpp.o
+[12/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/gutterstyle/gutterstyle.cpp.o
+[13/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/fishsyntax.cpp.o
+[14/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/dialog/dialog.cpp.o
+[15/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/cppsyntax.cpp.o
+[16/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/stickyscroll/stickyscroll.cpp.o
+[17/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/multicursor/multicursor.cpp.o
+[18/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/qmlsyntax.cpp.o
+[19/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/textstats/textstats.cpp.o
+[20/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/rustsyntax.cpp.o
+[21/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/minimap/minimap.cpp.o
+[22/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/shsyntax.cpp.o
+[23/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/document/document.cpp.o
+[24/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/wordwrap/wordwrap.cpp.o
+[25/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/tabbar/tabbar.cpp.o
+[26/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/textbuffer/textbuffer.cpp.o
+[27/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/inputHandler/inputhandler.cpp.o
+[28/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/undohistory/undohistory.cpp.o
+[29/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/fileIO/fileio.cpp.o
+[30/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/textstyle/textstyle.cpp.o
+[31/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/filebrowser/filebrowser.cpp.o
+[32/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/folding/folding.cpp.o
+[33/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/syntaxhighlight/syntaxhighlighter.cpp.o
+[34/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/tabs/tabmanager.cpp.o
+[35/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/textview/textview.cpp.o
+[36/114] Building CXX object CMakeFiles/textengine.dir/backend/textengine/findreplace/findreplace.cpp.o
+[37/114] Linking CXX static library libtextengine.a
+[38/114] Automatic MOC and UIC for target appChaoticNotepad
+[39/114] Running AUTOMOC file extraction for target appChaoticNotepad
+[40/114] Running rcc for resource appChaoticNotepad_raw_qml_0_extra_qmldirs
+[41/114] Running rcc for resource qmake_ChaoticNotepad
+[42/114] Generating .rcc/qmlcache/appChaoticNotepad_qmlcache_loader.cpp
+[43/114] Running moc --collect-json for target appChaoticNotepad
+[44/114] Running rcc for resource appChaoticNotepad_raw_qml_0
+[45/114] Automatic QML type registration for target appChaoticNotepad
+[46/114] Running rcc for resource appChaoticNotepad_raw_res_0
+[47/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_Icon_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_Icon_qml.cpp.aotstats
+[48/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_Theme_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_Theme_qml.cpp.aotstats
+[49/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_promptdialog_PromptDialog_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_promptdialog_PromptDialog_qml.cpp.aotstats
+[50/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsRow_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsRow_qml.cpp.aotstats
+[51/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_gutter_Gutter_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_gutter_Gutter_qml.cpp.aotstats
+[52/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_gutter_GutterCell_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_gutter_GutterCell_qml.cpp.aotstats
+[53/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_FontListPanel_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_FontListPanel_qml.cpp.aotstats
+[54/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_find_FindReplaceBar_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_find_FindReplaceBar_qml.cpp.aotstats
+[55/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_filebrowserdialog_FileBrowserDialog_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_filebrowserdialog_FileBrowserDialog_qml.cpp.aotstats
+[56/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_shortcutsdialog_ShortcutsDialog_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_shortcutsdialog_ShortcutsDialog_qml.cpp.aotstats
+[57/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_editor_CodeEditor_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_editor_CodeEditor_qml.cpp.aotstats
+[58/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsSwitch_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsSwitch_qml.cpp.aotstats
+[59/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_minimap_Minimap_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_minimap_Minimap_qml.cpp.aotstats
+[60/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsStepper_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsStepper_qml.cpp.aotstats
+[61/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsDialog_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsDialog_qml.cpp.aotstats
+[62/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_editor_EditorRow_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_editor_EditorRow_qml.cpp.aotstats
+[63/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_statusbar_BottomStatusbar_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_statusbar_BottomStatusbar_qml.cpp.aotstats
+[64/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_tabbar_DocumentTab_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_tabbar_DocumentTab_qml.cpp.aotstats
+[65/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_toolbar_ToolbarButton_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_toolbar_ToolbarButton_qml.cpp.aotstats
+[66/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_tabbar_DocumentTabBar_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_tabbar_DocumentTabBar_qml.cpp.aotstats
+[67/114] Generating .rcc/qmlcache/appChaoticNotepad_frontend_toolbar_BottomToolbar_qml.cpp, .rcc/qmlcache/appChaoticNotepad_frontend_toolbar_BottomToolbar_qml.cpp.aotstats
+[68/114] Generating .rcc/qmlcache/appChaoticNotepad_Main_qml.cpp, .rcc/qmlcache/appChaoticNotepad_Main_qml.cpp.aotstats
+[69/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.qt/rcc/qrc_qmake_ChaoticNotepad.cpp.o
+[70/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/editor/rowbuilder.cpp.o
+[71/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/find/findcontroller.cpp.o
+[72/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/gutter/guttercontroller.cpp.o
+[73/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_qmlcache_loader.cpp.o
+[74/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/minimap/minimappicture.cpp.o
+[75/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/gutter/guttermodel.cpp.o
+[76/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/browser/browsercontroller.cpp.o
+[77/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/settings/settingscontroller.cpp.o
+[78/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/status/statuscontroller.cpp.o
+[79/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/minimap/minimapcontroller.cpp.o
+[80/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/dialog/dialogcontroller.cpp.o
+[81/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/tabs/tabscontroller.cpp.o
+[82/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/appchaoticnotepad_qmltyperegistrations.cpp.o
+[83/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/main.cpp.o
+[84/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/editor/editorrowsmodel.cpp.o
+[85/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/shortcuts/shortcutscontroller.cpp.o
+[86/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/wrapper/editor/editorcontroller.cpp.o
+[87/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_Icon_qml.cpp.o
+[88/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_editor_EditorRow_qml.cpp.o
+[89/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_gutter_Gutter_qml.cpp.o
+[90/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_minimap_Minimap_qml.cpp.o
+[91/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_gutter_GutterCell_qml.cpp.o
+[92/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsSwitch_qml.cpp.o
+[93/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsStepper_qml.cpp.o
+[94/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.qt/rcc/qrc_appChaoticNotepad_raw_qml_0.cpp.o
+[95/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/appChaoticNotepad_autogen/mocs_compilation.cpp.o
+[96/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.qt/rcc/qrc_appChaoticNotepad_raw_qml_0_extra_qmldirs.cpp.o
+[97/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_editor_CodeEditor_qml.cpp.o
+[98/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.qt/rcc/qrc_appChaoticNotepad_raw_res_0.cpp.o
+[99/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsRow_qml.cpp.o
+[100/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_statusbar_BottomStatusbar_qml.cpp.o
+[101/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_promptdialog_PromptDialog_qml.cpp.o
+[102/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_FontListPanel_qml.cpp.o
+[103/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_Main_qml.cpp.o
+[104/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_Theme_qml.cpp.o
+[105/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_toolbar_BottomToolbar_qml.cpp.o
+[106/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_toolbar_ToolbarButton_qml.cpp.o
+[107/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_tabbar_DocumentTab_qml.cpp.o
+[108/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_tabbar_DocumentTabBar_qml.cpp.o
+[109/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_find_FindReplaceBar_qml.cpp.o
+[110/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_filebrowserdialog_FileBrowserDialog_qml.cpp.o
+[111/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_settingsdialog_SettingsDialog_qml.cpp.o
+[112/114] Building CXX object CMakeFiles/appChaoticNotepad.dir/build-release/.rcc/qmlcache/appChaoticNotepad_frontend_shortcutsdialog_ShortcutsDialog_qml.cpp.o
+[113/114] Linking CXX executable appChaoticNotepad
+-- Install configuration: "Release"
+-- Installing: /home/iusearchbtw/ThisPC/C++ projects/ChaoticNotepad/AppDir/usr/bin/appChaoticNotepad
+-- Set non-toolchain portion of runtime path of "/home/iusearchbtw/ThisPC/C++ projects/ChaoticNotepad/AppDir/usr/bin/appChaoticNotepad" to "$ORIGIN:$ORIGIN/../lib64"
+-- Installing: /home/iusearchbtw/ThisPC/C++ projects/ChaoticNotepad/AppDir/usr/share/applications/ChaoticNotepad.desktop
+-- Installing: /home/iusearchbtw/ThisPC/C++ projects/ChaoticNotepad/AppDir/usr/share/icons/hicolor/scalable/apps/ChaoticNotepad.svg
+linuxdeploy version 1-alpha (git commit ID 07333c6), GitHub actions build 369 built on 2026-10-01 04:30:41 UTC
+
+-- Creating basic AppDir structure -- 
+Creating directory AppDir/usr/bin/ 
+Creating directory AppDir/usr/lib/ 
+Creating directory AppDir/usr/share/applications/ 
+Creating directory AppDir/usr/share/icons/hicolor/ 
+Creating directory AppDir/usr/share/pixmaps/ 
+Creating directory AppDir/usr/share/icons/hicolor/16x16/apps/ 
+Creating directory AppDir/usr/share/icons/hicolor/32x32/apps/ 
+Creating directory AppDir/usr/share/icons/hicolor/64x64/apps/ 
+Creating directory AppDir/usr/share/icons/hicolor/128x128/apps/ 
+Creating directory AppDir/usr/share/icons/hicolor/256x256/apps/ 
+Creating directory AppDir/usr/share/icons/hicolor/scalable/apps/ 
+
+-- Deploying dependencies for existing files in AppDir -- 
+Deploying dependencies for ELF file AppDir/usr/bin/appChaoticNotepad 
+Deploying shared library /lib64/libQt6Quick.so.6
+Deploying shared library /lib64/libQt6OpenGL.so.6
+Deploying shared library /lib64/libQt6Gui.so.6
+Skipping deployment of blacklisted library /lib64/libGLX.so.0 
+Skipping deployment of blacklisted library /lib64/libOpenGL.so.0 
+Deploying shared library /lib64/libQt6Qml.so.6
+Deploying shared library /lib64/libQt6Network.so.6
+Deploying shared library /lib64/libQt6Core.so.6
+Skipping deployment of blacklisted library /lib64/libstdc++.so.6 
+Skipping deployment of blacklisted library /lib64/libm.so.6 
+Skipping deployment of blacklisted library /lib64/libgcc_s.so.1 
+Skipping deployment of blacklisted library /lib64/libc.so.6 
+Deploying shared library /lib64/libQt6QmlMeta.so.6
+Deploying shared library /lib64/libQt6QmlModels.so.6
+Skipping deployment of blacklisted library /lib64/libEGL.so.1 
+Skipping deployment of blacklisted library /lib64/libfontconfig.so.1 
+Skipping deployment of blacklisted library /lib64/libX11.so.6 
+Deploying shared library /lib64/libglib-2.0.so.0
+Deploying shared library /lib64/libQt6DBus.so.6
+Deploying shared library /lib64/libxkbcommon.so.0
+Deploying shared library /lib64/libpng16.so.16
+Skipping deployment of blacklisted library /lib64/libharfbuzz.so.0 
+Skipping deployment of blacklisted library /lib64/libfreetype.so.6 
+Skipping deployment of blacklisted library /lib64/libz.so.1 
+Deploying shared library /lib64/libXext.so.6
+Skipping deployment of blacklisted library /lib64/libGLdispatch.so.0 
+Deploying shared library /lib64/libgssapi_krb5.so.2
+Deploying shared library /lib64/libbrotlidec.so.1
+Deploying shared library /lib64/libzstd.so.1
+Deploying shared library /lib64/libproxy.so.1
+Deploying shared library /lib64/libcrypto.so.3
+Deploying shared library /lib64/libicui18n.so.77
+Deploying shared library /lib64/libicuuc.so.77
+Deploying shared library /lib64/libsystemd.so.0
+Deploying shared library /lib64/libdouble-conversion.so.3
+Deploying shared library /lib64/libb2.so.1
+Deploying shared library /lib64/libpcre2-16.so.0
+Deploying shared library /lib64/libQt6QmlWorkerScript.so.6
+Deploying shared library /lib64/libxml2.so.2
+Skipping deployment of blacklisted library /lib64/libxcb.so.1 
+Deploying shared library /lib64/libpcre2-8.so.0
+Deploying shared library /lib64/libdbus-1.so.3
+Deploying shared library /lib64/libgraphite2.so.3
+Deploying shared library /lib64/libbz2.so.1
+Deploying shared library /lib64/libkrb5.so.3
+Deploying shared library /lib64/libk5crypto.so.3
+Skipping deployment of blacklisted library /lib64/libcom_err.so.2 
+Deploying shared library /lib64/libkrb5support.so.0
+Deploying shared library /lib64/libkeyutils.so.1
+Skipping deployment of blacklisted library /lib64/libresolv.so.2 
+Deploying shared library /lib64/libbrotlicommon.so.1
+Deploying shared library /usr/lib64/libproxy/libpxbackend-1.0.so
+Deploying shared library /lib64/libgobject-2.0.so.0
+Deploying shared library /lib64/libicudata.so.77
+Deploying shared library /lib64/libgomp.so.1
+Deploying shared library /lib64/liblzma.so.5
+Deploying shared library /lib64/libXau.so.6
+Deploying shared library /lib64/libselinux.so.1
+Deploying shared library /lib64/libcurl.so.4
+Deploying shared library /lib64/libgio-2.0.so.0
+Deploying shared library /lib64/libduktape.so.207
+Deploying shared library /lib64/libffi.so.8
+Deploying shared library /lib64/libnghttp3.so.9
+Deploying shared library /lib64/libngtcp2_crypto_ossl.so.0
+Deploying shared library /lib64/libngtcp2.so.16
+Deploying shared library /lib64/libnghttp2.so.14
+Deploying shared library /lib64/libidn2.so.0
+Deploying shared library /lib64/libldap.so.2
+Deploying shared library /lib64/liblber.so.2
+Deploying shared library /lib64/libssh.so.4
+Deploying shared library /lib64/libpsl.so.5
+Deploying shared library /lib64/libssl.so.3
+Deploying shared library /lib64/libgmodule-2.0.so.0
+Deploying shared library /lib64/libmount.so.1
+Deploying shared library /lib64/libunistring.so.5
+Deploying shared library /lib64/libevent-2.1.so.7
+Deploying shared library /lib64/libsasl2.so.3
+Deploying shared library /lib64/libfido2.so.1
+Deploying shared library /lib64/libblkid.so.1
+Deploying shared library /lib64/libcrypt.so.2
+Deploying shared library /lib64/libcbor.so.0.13
+Deploying shared library /lib64/libudev.so.1
+
+-- Copying files into AppDir -- 
+Copying file /lib64/libQt6Core.so.6 to AppDir/usr/lib/libQt6Core.so.6 
+Copying file /lib64/libQt6DBus.so.6 to AppDir/usr/lib/libQt6DBus.so.6 
+Copying file /lib64/libQt6Gui.so.6 to AppDir/usr/lib/libQt6Gui.so.6 
+Copying file /lib64/libQt6Network.so.6 to AppDir/usr/lib/libQt6Network.so.6 
+Copying file /lib64/libQt6OpenGL.so.6 to AppDir/usr/lib/libQt6OpenGL.so.6 
+Copying file /lib64/libQt6Qml.so.6 to AppDir/usr/lib/libQt6Qml.so.6 
+Copying file /lib64/libQt6QmlMeta.so.6 to AppDir/usr/lib/libQt6QmlMeta.so.6 
+Copying file /lib64/libQt6QmlModels.so.6 to AppDir/usr/lib/libQt6QmlModels.so.6 
+Copying file /lib64/libQt6QmlWorkerScript.so.6 to AppDir/usr/lib/libQt6QmlWorkerScript.so.6 
+Copying file /lib64/libQt6Quick.so.6 to AppDir/usr/lib/libQt6Quick.so.6 
+Copying file /lib64/libXau.so.6 to AppDir/usr/lib/libXau.so.6 
+Copying file /lib64/libXext.so.6 to AppDir/usr/lib/libXext.so.6 
+Copying file /lib64/libb2.so.1 to AppDir/usr/lib/libb2.so.1 
+Copying file /lib64/libblkid.so.1 to AppDir/usr/lib/libblkid.so.1 
+Copying file /lib64/libbrotlicommon.so.1 to AppDir/usr/lib/libbrotlicommon.so.1 
+Copying file /lib64/libbrotlidec.so.1 to AppDir/usr/lib/libbrotlidec.so.1 
+Copying file /lib64/libbz2.so.1 to AppDir/usr/lib/libbz2.so.1 
+Copying file /lib64/libcbor.so.0.13 to AppDir/usr/lib/libcbor.so.0.13 
+Copying file /lib64/libcrypt.so.2 to AppDir/usr/lib/libcrypt.so.2 
+Copying file /lib64/libcrypto.so.3 to AppDir/usr/lib/libcrypto.so.3 
+Copying file /lib64/libcurl.so.4 to AppDir/usr/lib/libcurl.so.4 
+Copying file /lib64/libdbus-1.so.3 to AppDir/usr/lib/libdbus-1.so.3 
+Copying file /lib64/libdouble-conversion.so.3 to AppDir/usr/lib/libdouble-conversion.so.3 
+Copying file /lib64/libduktape.so.207 to AppDir/usr/lib/libduktape.so.207 
+Copying file /lib64/libevent-2.1.so.7 to AppDir/usr/lib/libevent-2.1.so.7 
+Copying file /lib64/libffi.so.8 to AppDir/usr/lib/libffi.so.8 
+Copying file /lib64/libfido2.so.1 to AppDir/usr/lib/libfido2.so.1 
+Copying file /lib64/libgio-2.0.so.0 to AppDir/usr/lib/libgio-2.0.so.0 
+Copying file /lib64/libglib-2.0.so.0 to AppDir/usr/lib/libglib-2.0.so.0 
+Copying file /lib64/libgmodule-2.0.so.0 to AppDir/usr/lib/libgmodule-2.0.so.0 
+Copying file /lib64/libgobject-2.0.so.0 to AppDir/usr/lib/libgobject-2.0.so.0 
+Copying file /lib64/libgomp.so.1 to AppDir/usr/lib/libgomp.so.1 
+Copying file /lib64/libgraphite2.so.3 to AppDir/usr/lib/libgraphite2.so.3 
+Copying file /lib64/libgssapi_krb5.so.2 to AppDir/usr/lib/libgssapi_krb5.so.2 
+Copying file /lib64/libicudata.so.77 to AppDir/usr/lib/libicudata.so.77 
+Copying file /lib64/libicui18n.so.77 to AppDir/usr/lib/libicui18n.so.77 
+Copying file /lib64/libicuuc.so.77 to AppDir/usr/lib/libicuuc.so.77 
+Copying file /lib64/libidn2.so.0 to AppDir/usr/lib/libidn2.so.0 
+Copying file /lib64/libk5crypto.so.3 to AppDir/usr/lib/libk5crypto.so.3 
+Copying file /lib64/libkeyutils.so.1 to AppDir/usr/lib/libkeyutils.so.1 
+Copying file /lib64/libkrb5.so.3 to AppDir/usr/lib/libkrb5.so.3 
+Copying file /lib64/libkrb5support.so.0 to AppDir/usr/lib/libkrb5support.so.0 
+Copying file /lib64/liblber.so.2 to AppDir/usr/lib/liblber.so.2 
+Copying file /lib64/libldap.so.2 to AppDir/usr/lib/libldap.so.2 
+Copying file /lib64/liblzma.so.5 to AppDir/usr/lib/liblzma.so.5 
+Copying file /lib64/libmount.so.1 to AppDir/usr/lib/libmount.so.1 
+Copying file /lib64/libnghttp2.so.14 to AppDir/usr/lib/libnghttp2.so.14 
+Copying file /lib64/libnghttp3.so.9 to AppDir/usr/lib/libnghttp3.so.9 
+Copying file /lib64/libngtcp2.so.16 to AppDir/usr/lib/libngtcp2.so.16 
+Copying file /lib64/libngtcp2_crypto_ossl.so.0 to AppDir/usr/lib/libngtcp2_crypto_ossl.so.0 
+Copying file /lib64/libpcre2-16.so.0 to AppDir/usr/lib/libpcre2-16.so.0 
+Copying file /lib64/libpcre2-8.so.0 to AppDir/usr/lib/libpcre2-8.so.0 
+Copying file /lib64/libpng16.so.16 to AppDir/usr/lib/libpng16.so.16 
+Copying file /lib64/libproxy.so.1 to AppDir/usr/lib/libproxy.so.1 
+Copying file /lib64/libpsl.so.5 to AppDir/usr/lib/libpsl.so.5 
+Copying file /lib64/libsasl2.so.3 to AppDir/usr/lib/libsasl2.so.3 
+Copying file /lib64/libselinux.so.1 to AppDir/usr/lib/libselinux.so.1 
+Copying file /lib64/libssh.so.4 to AppDir/usr/lib/libssh.so.4 
+Copying file /lib64/libssl.so.3 to AppDir/usr/lib/libssl.so.3 
+Copying file /lib64/libsystemd.so.0 to AppDir/usr/lib/libsystemd.so.0 
+Copying file /lib64/libudev.so.1 to AppDir/usr/lib/libudev.so.1 
+Copying file /lib64/libunistring.so.5 to AppDir/usr/lib/libunistring.so.5 
+Copying file /lib64/libxkbcommon.so.0 to AppDir/usr/lib/libxkbcommon.so.0 
+Copying file /lib64/libxml2.so.2 to AppDir/usr/lib/libxml2.so.2 
+Copying file /lib64/libzstd.so.1 to AppDir/usr/lib/libzstd.so.1 
+Copying file /usr/lib64/libproxy/libpxbackend-1.0.so to AppDir/usr/lib/libpxbackend-1.0.so 
+WARNING: $NO_STRIP environment variable detected, not stripping binaries 
+Setting rpath in ELF file AppDir/usr/bin/appChaoticNotepad to $ORIGIN/../lib 
+Setting rpath in ELF file AppDir/usr/lib/libQt6Core.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6DBus.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6Gui.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6Network.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6OpenGL.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6Qml.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6QmlMeta.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6QmlModels.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6QmlWorkerScript.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libQt6Quick.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libXau.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libXext.so.6 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libb2.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libblkid.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libbrotlicommon.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libbrotlidec.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libbz2.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libcbor.so.0.13 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libcrypt.so.2 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libcrypto.so.3 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libcurl.so.4 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libdbus-1.so.3 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libdouble-conversion.so.3 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libduktape.so.207 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libevent-2.1.so.7 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libffi.so.8 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libfido2.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libgio-2.0.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libglib-2.0.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libgmodule-2.0.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libgobject-2.0.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libgomp.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libgraphite2.so.3 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libgssapi_krb5.so.2 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libicudata.so.77 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libicui18n.so.77 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libicuuc.so.77 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libidn2.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libk5crypto.so.3 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libkeyutils.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libkrb5.so.3 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libkrb5support.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/liblber.so.2 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libldap.so.2 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/liblzma.so.5 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libmount.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libnghttp2.so.14 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libnghttp3.so.9 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libngtcp2.so.16 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libngtcp2_crypto_ossl.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libpcre2-16.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libpcre2-8.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libpng16.so.16 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libproxy.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libpsl.so.5 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libpxbackend-1.0.so to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libsasl2.so.3 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libselinux.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libssh.so.4 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libssl.so.3 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libsystemd.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libudev.so.1 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libunistring.so.5 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libxkbcommon.so.0 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libxml2.so.2 to $ORIGIN 
+Setting rpath in ELF file AppDir/usr/lib/libzstd.so.1 to $ORIGIN 
+
+-- Running input plugin: qt -- 
+[qt/stdout] Using user specified qmake: /usr/lib64/qt6/bin/qmake6 
+[qt/stdout] Using qmake: /usr/lib64/qt6/bin/qmake6 
+[qt/stderr] linuxdeploy-plugin-qt version 1-alpha (git commit ID 9b9fca1), GitHub actions build 256 built on 2026-08-22 12:40:38 UTC
+[qt/stdout] 
+[qt/stdout] Using Qt version:  6.11.2  ( 6 ) 
+[qt/stdout]   libEGL.so.1  libGLX.so.0  libGLdispatch.so.0  libOpenGL.so.0  libQt6Core.so.6  libQt6DBus.so.6  libQt6Gui.so.6  libQt6Network.so.6  libQt6OpenGL.so.6  libQt6Qml.so.6  libQt6QmlMeta.so.6  libQt6QmlModels.so.6  libQt6QmlWorkerScript.so.6  libQt6Quick.so.6  libX11.so.6  libXau.so.6  libXext.so.6  libb2.so.1  libblkid.so.1  libbrotlicommon.so.1  libbrotlidec.so.1  libbz2.so.1  libc.so.6  libcbor.so.0.13  libcom_err.so.2  libcrypt.so.2  libcrypto.so.3  libcurl.so.4  libdbus-1.so.3  libdouble-conversion.so.3  libduktape.so.207  libevent-2.1.so.7  libffi.so.8  libfido2.so.1  libfontconfig.so.1  libfreetype.so.6  libgcc_s.so.1  libgio-2.0.so.0  libglib-2.0.so.0  libgmodule-2.0.so.0  libgobject-2.0.so.0  libgomp.so.1  libgraphite2.so.3  libgssapi_krb5.so.2  libharfbuzz.so.0  libicudata.so.77  libicui18n.so.77  libicuuc.so.77  libidn2.so.0  libk5crypto.so.3  libkeyutils.so.1  libkrb5.so.3  libkrb5support.so.0  liblber.so.2  libldap.so.2  liblzma.so.5  libm.so.6  libmount.so.1  libnghttp2.so.14  libnghttp3.so.9  libngtcp2.so.16  libngtcp2_crypto_ossl.so.0  libpcre2-16.so.0  libpcre2-8.so.0  libpng16.so.16  libproxy.so.1  libpsl.so.5  libpxbackend-1.0.so  libresolv.so.2  libsasl2.so.3  libselinux.so.1  libssh.so.4  libssl.so.3  libstdc++.so.6  libsystemd.so.0  libudev.so.1  libunistring.so.5  libxcb.so.1  libxkbcommon.so.0  libxml2.so.2  libz.so.1  libzstd.so.1
+[qt/stdout] Found Qt modules: core dbus gui network opengl qml qmlmodels qmlworkerscript quick 
+[qt/stdout] Extra Qt modules: waylandcompositor 
+[qt/stdout] 
+[qt/stdout] QT_INSTALL_LIBS: /usr/lib64 
+[qt/stdout] Prepending QT_INSTALL_LIBS path to $LD_LIBRARY_PATH, new $LD_LIBRARY_PATH: /usr/lib64: 
+[qt/stdout] Prepending QT_INSTALL_BINS and QT_INSTALL_LIBEXECS paths to $PATH, new $PATH: /usr/lib64/qt6/bin:/usr/lib64/qt6/libexec:/home/iusearchbtw/ThisPC/C++ projects/ChaoticNotepad/tools:/usr/lib64/qt6/bin:/home/iusearchbtw/.local/bin:/home/iusearchbtw/.local/share/../bin:/usr/local/bin:/usr/bin:/bin 
+[qt/stdout] 
+[qt/stdout] -- Deploying module: core -- 
+[qt/stdout] 
+[qt/stdout] -- Deploying module: dbus -- 
+[qt/stdout] 
+[qt/stdout] -- Deploying module: gui -- 
+[qt/stdout] Deploying platform plugins 
+[qt/stdout] Deploying shared library /usr/lib64/qt6/plugins/platforms/libqxcb.so (destination: AppDir/usr/plugins/platforms/)
+[qt/stdout] Deploying dependencies for ELF file /usr/lib64/qt6/plugins/platforms/libqxcb.so 
+[qt/stdout] Deploying shared library /usr/lib64/libQt6XcbQpa.so.6
+[qt/stdout] Deploying shared library /usr/lib64/libQt6Gui.so.6
+[qt/stdout] Deploying shared library /usr/lib64/libQt6Core.so.6
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libstdc++.so.6 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libc.so.6 
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-cursor.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-icccm.so.4
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-image.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-keysyms.so.1
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-randr.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-render.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-render-util.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-shape.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-shm.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-sync.so.1
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libxcb.so.1 
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-xfixes.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-xkb.so.1
+[qt/stdout] Deploying shared library /usr/lib64/libxkbcommon.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libglib-2.0.so.0
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libX11-xcb.so.1 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libX11.so.6 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libSM.so.6 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libICE.so.6 
+[qt/stdout] Deploying shared library /usr/lib64/libxkbcommon-x11.so.0
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libgcc_s.so.1 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libm.so.6 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libEGL.so.1 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libfontconfig.so.1 
+[qt/stdout] Deploying shared library /usr/lib64/libQt6DBus.so.6
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libGLX.so.0 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libOpenGL.so.0 
+[qt/stdout] Deploying shared library /usr/lib64/libpng16.so.16
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libharfbuzz.so.0 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libfreetype.so.6 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libz.so.1 
+[qt/stdout] Deploying shared library /usr/lib64/libicui18n.so.77
+[qt/stdout] Deploying shared library /usr/lib64/libicuuc.so.77
+[qt/stdout] Deploying shared library /usr/lib64/libsystemd.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libdouble-conversion.so.3
+[qt/stdout] Deploying shared library /usr/lib64/libb2.so.1
+[qt/stdout] Deploying shared library /usr/lib64/libpcre2-16.so.0
+[qt/stdout] Deploying shared library /usr/lib64/libcrypto.so.3
+[qt/stdout] Deploying shared library /usr/lib64/libzstd.so.1
+[qt/stdout] Deploying shared library /usr/lib64/libxcb-util.so.1
+[qt/stdout] Deploying shared library /usr/lib64/libXau.so.6
+[qt/stdout] Deploying shared library /usr/lib64/libpcre2-8.so.0
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libuuid.so.1 
+[qt/stdout] Skipping deployment of blacklisted library /usr/lib64/libGLdispatch.so.0 
+[qt/stdout] Deploying shared library /usr/lib64/libxml2.so.2
+[qt/stdout] Deploying shared library /usr/lib64/libdbus-1.so.3
+[qt/stdout] Deploying shared library /usr/lib64/libXext.so.6
+[qt/stdout] Deploying shared library /usr/lib64/libgraphite2.so.3
+[qt/stdout] Deploying shared library /usr/lib64/libbz2.so.1
+[qt/stdout] Deploying shared library /usr/lib64/libbrotlidec.so.1
+[qt/stdout] Deploying shared library /usr/lib64/libicudata.so.77
+[qt/stdout] Deploying shared library /usr/lib64/libgomp.so.1
+[qt/stdout] Deploying shared library /usr/lib64/liblzma.so.5
+[qt/stdout] Deploying shared library /usr/lib64/libbrotlicommon.so.1
+[qt/stdout] Deploying extra platform plugin:  libqwayland-generic.so 
+[qt/stdout] ERROR: Cannot deploy non-existing library file: /usr/lib64/qt6/plugins/platforms/libqwayland-generic.so 
+ERROR: Failed to run plugin: qt (exit code: 1) 
