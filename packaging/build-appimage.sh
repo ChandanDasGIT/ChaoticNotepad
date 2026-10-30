@@ -164,6 +164,8 @@ EOF
 chmod +x "$APPDIR/AppRun"
 
 # ------------------------------------------------------------------ the AppImage
+# appimagetool stopped making .DirIcon from an SVG (build 333): without it, it refuses to pack.
+ln -sf "$NAME.svg" "$APPDIR/.DirIcon"
 appimagetool-x86_64.AppImage --no-appstream "$APPDIR" "$DIST/$NAME-$VERSION-$ARCH.AppImage"
 
 # ------------------------------------------------------------------ the tarball
