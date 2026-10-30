@@ -1,35 +1,37 @@
 # ChaoticNotepad
 
-A modern, minimalist cross-platform text and code editor built with C++ and Qt6 QML.
+A modern, minimalist text and code editor for Linux, built with C++ and Qt6 QML.
 
 ## Installation
 
 ### Install from Pre-Compiled Release (Recommended)
 
-1. Download `.tar.xz` file from the **Releases** page.
-2. Extract the archive, go to the extracted folder(in the tarminal) and simply run :
+1. Download the `ChaoticNotepad-*-linux-x86_64.tar.xz` file from the **Releases** page.
+2. Extract the archive, go to the extracted folder (in the terminal) and run:
 
 ```bash
- ./install-app.sh
+./install-app.sh
 ```
-3. To uninstall, go to the extracted folder(in the tarminal) and simply run :
 
-```bash
- ./uninstall-app.sh
-```
+This installs for your user only, so it does not need sudo. It adds the app to your menu and adds the `ChaoticNotepad` command to `~/.local/bin` (that folder must be on your PATH for the command to work).
 
 ### Use AppImage (Recommended)
 
 1. Download `ChaoticNotepad-*-x86_64.AppImage` from the **Releases** page.
-2. run the AppImage
+2. Make it executable and run it:
+
+```bash
+chmod +x ChaoticNotepad-*-x86_64.AppImage
+./ChaoticNotepad-*-x86_64.AppImage
+```
 
 ### Build and Install from Source (Alternative)
 
 If you prefer to clone the repository and build natively from source:
 
-1. Ensure you have the prerequisites installed: (1. c/cpp compiler 2. qt qt6 min version 6.10)
+1. Ensure you have the prerequisites installed: a C++17 compiler, CMake, and Qt 6.10 or newer.
 
-   Note: In the CMakeLists.txt i used "qt_standard_project_setup(REQUIRES 6.10)".So if you are on Ubuntu, you have to either manually install qt6.10 or use the AppImage.
+   Note: `CMakeLists.txt` uses `qt_standard_project_setup(REQUIRES 6.10)`. So if your distribution's Qt is older (for example on Ubuntu), you have to either install Qt 6.10 manually or use the AppImage.
 
  - Fedora: `sudo dnf install cmake gcc-c++ qt6-qtdeclarative-devel qt6-qtwayland`
  - Arch Linux: `sudo pacman -S cmake gcc qt6-declarative qt6-wayland`
@@ -38,7 +40,7 @@ If you prefer to clone the repository and build natively from source:
        qml6-module-qtquick-controls qml6-module-qtquick-layouts 
        qml6-module-qtquick-window qt6-wayland`
 
-2. Clone and build:
+2. Clone and build. This installs into `/usr/local`:
 
 ```bash
 git clone https://github.com/ChandanDasGIT/ChaoticNotepad.git
@@ -48,33 +50,40 @@ sudo ./install.sh
 
 ## Uninstallation
 
-If installed via the pre-compiled binary package:
+If installed from the `.tar.xz` release, run this from the extracted folder, without sudo. Your documents and settings stay:
 
 ```bash
-sudo ./uninstall-app.sh
+./uninstall-app.sh
 ```
 
-If installed from source:
+If installed from source, run this from the cloned folder:
 
 ```bash
 sudo ./uninstall.sh
 ```
+
+If you used the AppImage, nothing was installed: just delete the file.
+
+## Where it keeps your data
+
+Settings and changed shortcuts are saved in `~/.config/ChaoticNotepad/ChaoticNotepad.conf`.
 
 ### Features:
 
 Editing
 - Multiple cursors: Alt+click, add a cursor above or below, add the next occurrence of the selection, select every occurrence. Typing and editing apply to all cursors in one undo step.
 - Undo and redo with small stored steps, so long sessions on big files use little memory.
-- Auto-indent, Tab and Shift+Tab to indent and outdent, with the indent style (tabs or spaces, and how many) detected from each file.
-- Brackets and quotes close automatically.
+- Auto-indent, Tab and Shift+Tab to indent and outdent. A file that is already indented keeps its own style (tabs or spaces, and how many). Other files and new tabs use your setting, and changing the setting applies it to all open tabs.
+- Brackets and quotes close automatically (can be switched off).
 - Move, duplicate and delete whole lines.
+- Long lines wrap to the window. Up and Down move one screen row at a time.
 - Word and line movement and selection with the keyboard.
 
 Code features
 - Syntax highlighting for C/C++, JavaScript, Rust, QML, Lua, Fish, shell scripts and CMake.
 - Code folding, by brackets or by indentation (for example Python), with fold and unfold all.
 - Sticky scrolling: the headers of the blocks you are inside stay pinned at the top.
-- Line-number gutter that marks changed lines: red for unsaved changes, green for changes already saved, gray for untouched lines.
+- Line-number gutter that marks changed lines: red for unsaved changes, green for changes already saved, no mark for untouched lines.
 - Minimap showing the whole document, with the visible part, the cursor, selections, search matches and changed lines marked. Click or drag it to scroll.
 
 Search
@@ -82,23 +91,33 @@ Search
 - Match counter ("3 of 12"), next and previous match, and a "Search wrapped" message when the search goes around.
 - Replace and Replace all. In regex mode the replacement can use captured groups ($1, \1).
 - Select all matches at once.
+- App shortcuts such as save and switching tabs keep working while you type in the find bar.
 
 Files and tabs
 - Tabs with an unsaved marker, drag-and-drop reordering, reopen of the last closed tab, and keyboard switching.
-- Open files from the command line: ChaoticNotepad file1.txt file2.txt
+- Open existing files from the command line: `ChaoticNotepad file1.txt file2.txt`
+- Drop files on the window to open them.
 - Built-in file browser for Open and Save as, with a type-to-filter list, typed paths including ~, and a hidden files toggle.
-- Safe saving through a temporary file, so a crash cannot leave a half-written file.
-- Line endings (LF or CRLF) and UTF-8 BOM are kept as they were. The encoding is checked, and files that are not valid text, or are too big, are refused with a message instead of being damaged.
-- Detects when a file changes or is deleted on disk, and lets you reload it, keep your version, or open the disk copy in a new tab.
+- Safe saving through a temporary file, so a crash cannot leave a half-written file. A saved file always ends with a newline.
+- Line endings (LF or CRLF) and UTF-8 BOM are kept as they were. A file with mixed line endings is saved unchanged until you edit it, then it uses its most common ending and tells you.
+- Binary files, and files over 50 MB, are refused with a message instead of being damaged.
+- Detects when the file in the current tab changes or is deleted on disk. A file with no unsaved edits reloads by itself. Otherwise you can reload it, keep your version, or open the disk copy in a new tab.
+- Save as will not overwrite a file that is open in another tab.
 - Prompt before closing a file with unsaved changes ("Don't save" is shown in red).
 
 Interface
 - Dark and light themes.
-- Settings: font (searchable list of every installed font), font size, indent style.
+- Settings: theme, font (searchable list of every installed font), font size, indent width, tabs or spaces, closing brackets and quotes, and the minimap.
 - Editable keyboard shortcuts with restore defaults, and a shortcuts list you can open from the toolbar.
-- Status bar with cursor position, lines, words, paragraphs and indent setting.
-  
+- Status bar with the latest message, cursor position, selection and cursor counts, lines, words, paragraphs, indent setting, encoding, line ending and language.
+
 Packaging
 - AppImage and tar.xz releases for Linux x86_64 with Qt included, plus install scripts for the menu entry and the "ChaoticNotepad" command.
 
+## How it is built
 
+The editor engine in `backend/` is plain C++17 with no Qt. `wrapper/` connects it to the QML screens in `frontend/`. `EducationPurpose/` has the full file tree (`architecture.txt`) and diagrams of how the parts connect (`ChaoticNotepadMap.pdf`).
+
+## License
+
+GNU General Public License v3. See `LICENSE`.
