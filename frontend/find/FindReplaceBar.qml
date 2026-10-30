@@ -82,10 +82,23 @@ Rectangle {
             font.pixelSize: Theme.uiFontSize + 1
 
             onTextEdited: f.edited(input.text)
+
+            // Ctrl and Alt keys are the app's shortcuts (save, tabs, ...), except the ones that edit this field
+            readonly property var fieldKeys: [Qt.Key_A, Qt.Key_C, Qt.Key_V, Qt.Key_X, Qt.Key_Z, Qt.Key_Y, Qt.Key_Insert,
+                                              Qt.Key_Left, Qt.Key_Right, Qt.Key_Home, Qt.Key_End, Qt.Key_Backspace, Qt.Key_Delete]
+            Keys.onPressed: (e) => {
+                const alt = (e.modifiers & Qt.AltModifier) !== 0
+                const ctrl = (e.modifiers & Qt.ControlModifier) !== 0
+                if (alt || (ctrl && !fieldKeys.includes(e.key)))
+                    e.accepted = EditorController.keyPressed(e.key, e.text, e.modifiers)
+            }
             Keys.onReturnPressed: (e) => f.accepted((e.modifiers & Qt.ShiftModifier) !== 0)
             Keys.onEnterPressed: (e) => f.accepted((e.modifiers & Qt.ShiftModifier) !== 0)
             Keys.onEscapePressed: f.escaped()
-            Keys.onTabPressed: f.tabbed()
+            Keys.onTabPressed: (e) => {
+                if ((e.modifiers & Qt.ControlModifier) !== 0) e.accepted = EditorController.keyPressed(e.key, e.text, e.modifiers)
+                else f.tabbed()
+            }
         }
 
         Text {

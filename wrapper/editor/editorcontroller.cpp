@@ -77,6 +77,7 @@ void EditorController::rebuild(bool force) {
 
     const size_t room = m_columns > 1 ? m_columns - 1 : 1;     // one cell is kept for the cursor at the end of a line
     const size_t rowsBefore = m_builder.rowCount();
+    tab.view.setWrap(room, RowBuilder::kTabWidth);             // Up / Down follow the rows made here
     m_builder.update(tab, room);
     const size_t rowsAfter = m_builder.rowCount();
     const size_t rowsDiff = rowsAfter > rowsBefore ? rowsAfter - rowsBefore : rowsBefore - rowsAfter;
@@ -191,8 +192,17 @@ void EditorController::sendChar(char letter, bool ctrl, bool shift, bool alt) {
 void EditorController::send(const Input::Event& ev) { feed(ev, false); }
 
 void EditorController::save() { sendChar('s', true, false, false); }     // a file without a name opens the Save As box
-void EditorController::undo() { sendChar('z', true, false, false); }
-void EditorController::redo() { sendChar('z', true, true, false); }
+
+// Not sent as Ctrl+Z: with the find bar open that key belongs to the bar, and the buttons must still work.
+void EditorController::undo() {
+    m_state.status = m_tabs.current().view.undo() ? "undo" : "nothing to undo";
+    changedOutside(true);
+}
+
+void EditorController::redo() {
+    m_state.status = m_tabs.current().view.redo() ? "redo" : "nothing to redo";
+    changedOutside(true);
+}
 
 std::string EditorController::saveTab(EditorTab& tab) {
     std::string msg;
@@ -244,6 +254,10 @@ void EditorController::saveCurrent() {
 }
 
 void EditorController::saveCurrentAs(const std::string& path) {
+    if (m_tabs.openElsewhere(path, m_tabs.currentIndex())) {            // two tabs on one file would overwrite each other
+        m_state.status = FileIO::baseName(path) + " is open in another tab - close it first";
+        return;
+    }
     EditorTab& tab = m_tabs.current();
     std::string msg;
     if (tab.doc.saveAs(path, tab.view, msg)) {
@@ -434,7 +448,10 @@ void EditorController::openUrls(const QList<QUrl>& urls) {
     if (paths.empty()) return;
     std::string msg;
     m_tabs.openFiles(paths, msg);
+    m_state.status = msg;
     setStatus(msg);
+    if (m_state.mode != InputMode::Edit)
+        refreshFind(m_tabs.current().view, m_state);     // the find bar is open: search again in this tab
     rebuild(true);
     emit scrollRequested(static_cast<int>(m_tabs.current().scrollTop));
     m_firstRow = m_tabs.current().scrollTop;

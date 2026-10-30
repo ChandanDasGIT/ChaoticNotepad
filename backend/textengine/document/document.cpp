@@ -1,7 +1,8 @@
 #include "document.h"
 
-IndentStyle Document::detectIndent(const std::string& text) {
+IndentStyle Document::detectIndent(const std::string& text, bool* found) {
     IndentStyle style;
+    if (found) *found = false;
     size_t tabLines = 0, spaceLines = 0;
     size_t hist[9] = {0};                 // how often the indent changes by 2..8 spaces between two indented lines
     size_t prev = 0;
@@ -29,12 +30,14 @@ IndentStyle Document::detectIndent(const std::string& text) {
     }
     if (tabLines > spaceLines) {
         style.useTabs = true;
+        if (found) *found = true;
         return style;
     }
     size_t best = 4;                                                  // 4 wins a tie, then 2
     for (size_t w : {size_t(4), size_t(2), size_t(3), size_t(8), size_t(6), size_t(5), size_t(7)})
         if (hist[w] > hist[best]) best = w;
     style.width = best;
+    if (found) *found = hist[best] > 0;
     return style;
 }
 
@@ -49,12 +52,18 @@ bool Document::modified(const TextView& view) const {
 }
 
 void Document::applyRaw(const std::string& raw, const std::string& path, TextView& view, bool& hadTabs) {
-    m_crlf = raw.find("\r\n") != std::string::npos;
+    size_t crlf = 0, lf = 0, cr = 0;
+    for (size_t i = 0; i < raw.size(); ++i) {
+        if (raw[i] == '\r') ++cr;
+        else if (raw[i] == '\n') ++(i > 0 && raw[i - 1] == '\r' ? crlf : lf);
+    }
+    m_crlf = crlf > lf;
+    m_mixedRaw = (crlf > 0 && lf > 0) || cr != crlf ? raw : std::string();
     m_encoding = FileIO::detectEncoding(raw);
     m_bom = raw.size() >= 3 && raw.compare(0, 3, "\xEF\xBB\xBF") == 0;      // keep it out of the text, write it back on save
     std::string text = FileIO::normalizeText(m_bom ? raw.substr(3) : raw, &hadTabs);
     view.loadText(text);
-    view.setIndent(detectIndent(text));                   // Tab inserts what this file already uses
+    view.setIndent(detectIndent(text, &m_ownIndent));     // Tab inserts what this file already uses
     view.setFoldLanguage(path);
     m_savedText = view.text();
 }
@@ -104,8 +113,12 @@ bool Document::save(TextView& view, std::string& message) {
         else view.moveCursor(keep.pos);
         text = view.text();
     }
+    const bool keepMixed = !m_mixedRaw.empty() && text == m_savedText;   // not edited: the line breaks stay as they are
+    const bool evenedOut = !m_mixedRaw.empty() && !keepMixed;
     std::string out = m_bom ? "\xEF\xBB\xBF" : "";
-    if (m_crlf) {
+    if (keepMixed) {
+        out = m_mixedRaw;
+    } else if (m_crlf) {
         out.reserve(text.size() + text.size() / 20);
         for (char c : text) {
             if (c == '\n') out += "\r\n";
@@ -131,6 +144,10 @@ bool Document::save(TextView& view, std::string& message) {
     m_encoding = FileIO::detectEncoding(text);       // typing an accent into an ASCII file makes it UTF-8
     if (m_bom && m_encoding != "invalid UTF-8") m_encoding = "UTF-8 BOM";
     message = "saved " + FileIO::baseName(m_path) + (newFolder ? " (new folder created)" : "");
+    if (evenedOut) {
+        m_mixedRaw.clear();
+        message += " (mixed line endings are now all " + lineEndingName() + ")";
+    }
     return true;
 }
 
@@ -197,6 +214,8 @@ bool Document::reload(TextView& view, std::string& message) {
 void Document::loadUntitled(const std::string& text, TextView& view) {
     m_path.clear();
     m_crlf = false;
+    m_mixedRaw.clear();
+    m_ownIndent = false;
     m_bom = false;
     view.loadText(text);
     m_savedText = view.text();

@@ -4,7 +4,8 @@
 #include <QtQml/qqmlregistration.h>
 
 // What SettingsDialog.qml talks to (SettingsController in QML). The choices are remembered between runs
-// (QSettings) and applied to the engine: indentation and bracket closing for every tab, the minimap switch.
+// (QSettings) and applied to the engine: bracket closing for every tab, indentation for the tabs whose file shows
+// none of its own (changing the setting applies it to all of them), the minimap switch.
 // The font and the dark mode are applied by the dialog itself, which binds them to Theme.
 class SettingsController : public QObject {
     Q_OBJECT
@@ -43,6 +44,7 @@ signals:
 
 private:
     void applyToTabs();          // indentation and bracket closing, for every tab (also the ones opened later)
+    void overrideFileIndent();   // the user changed the indentation: every tab follows it now, also files with their own
     void syncMinimap();          // Alt+M changed it: remember that too
     void store();
 

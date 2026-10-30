@@ -184,6 +184,13 @@ void TabManager::move(size_t from, size_t to) {
 
 // ---------------------------------------------------------------- state
 
+bool TabManager::openElsewhere(const std::string& path, size_t index) const {
+    const std::string want = canonical(path);
+    for (size_t i = 0; i < m_tabs.size(); ++i)
+        if (i != index && m_tabs[i]->doc.hasPath() && canonical(m_tabs[i]->doc.path()) == want) return true;
+    return false;
+}
+
 bool TabManager::modified(size_t i) const {
     const EditorTab& t = *m_tabs[i];
     return i == m_current ? t.doc.modified(t.view) : t.modifiedCache;

@@ -3,6 +3,7 @@
 #include <cctype>
 #include <functional>
 #include <utility>
+#include "../wordwrap/wordwrap.h"
 
 namespace {
 
@@ -353,9 +354,60 @@ void TextView::finishMove() {
     m_lastKind = EditKind::None;   // moving ends the current typing group for undo
 }
 
+namespace {
+
+const size_t kNoWrap = static_cast<size_t>(-1) / 2;
+
+// the row of a line that holds byte column `col`
+size_t rowHolding(const std::vector<WordWrap::VisualRow>& rows, size_t col) {
+    for (size_t i = 0; i < rows.size(); ++i)
+        if (col >= rows[i].start && (col < rows[i].end || rows[i].last)) return i;
+    return 0;
+}
+
+}
+
+void TextView::setWrap(size_t width, size_t tabWidth) {
+    m_wrapWidth = width;
+    m_wrapTab = tabWidth;
+}
+
 size_t TextView::goalVisual(const Cursor& c) const {
     if (c.vertValid && c.pos == c.vertPos) return c.vertGoal;           // still where the last Up / Down left it
-    return Utf8::columnOf(m_buffer.line(c.pos.line), c.pos.col, m_indent.width);
+    const std::string& s = m_buffer.line(c.pos.line);
+    const size_t tabWidth = m_wrapWidth ? m_wrapTab : m_indent.width;
+    const auto rows = WordWrap::layoutLine(s, c.pos.line, m_wrapWidth ? m_wrapWidth : kNoWrap, tabWidth);
+    const size_t start = rows[rowHolding(rows, c.pos.col)].start;
+    return Utf8::columnOf(s.substr(start, c.pos.col - start), c.pos.col - start, tabWidth);
+}
+
+bool TextView::stepRow(Position from, int dir, size_t goal, Position& to) const {
+    const size_t width = m_wrapWidth ? m_wrapWidth : kNoWrap;
+    const size_t tabWidth = m_wrapWidth ? m_wrapTab : m_indent.width;
+    auto rows = WordWrap::layoutLine(m_buffer.line(from.line), from.line, width, tabWidth);
+    size_t row = rowHolding(rows, from.col);
+
+    if (dir > 0 && row + 1 < rows.size()) {
+        ++row;
+    } else if (dir < 0 && row > 0) {
+        --row;
+    } else {                                                            // over the edge of this line
+        size_t line = 0;
+        if (dir > 0) {
+            line = m_folding.nextVisible(from.line);
+            if (line >= m_buffer.lineCount()) return false;
+        } else {
+            if (from.line == 0) return false;
+            line = m_folding.prevVisible(from.line);
+        }
+        rows = WordWrap::layoutLine(m_buffer.line(line), line, width, tabWidth);
+        row = dir > 0 ? 0 : rows.size() - 1;
+    }
+
+    const WordWrap::VisualRow& r = rows[row];
+    const std::string text = m_buffer.line(r.line).substr(r.start, r.end - r.start);
+    to = Position{r.line, std::min(r.start + Utf8::byteAtColumn(text, goal, tabWidth), r.maxCaret)};
+    return true;
 }
 
 void TextView::moveAll(bool extend, bool keepGoal, const std::function<Position(const Cursor&)>& target) {
@@ -432,8 +484,7 @@ void TextView::moveUp(bool extend) {
 
     moveAll(extend, true, [this](const Cursor& c) {
         Position p = c.pos;
-        if (p.line == 0) p.col = 0;
-        else { p.line = m_folding.prevVisible(p.line); p.col = Utf8::byteAtColumn(m_buffer.line(p.line), goalVisual(c), m_indent.width); }
+        if (!stepRow(c.pos, -1, goalVisual(c), p)) p.col = 0;
         return p;
     });
     m_suppressFoldSnap = false;
@@ -442,9 +493,7 @@ void TextView::moveUp(bool extend) {
 void TextView::moveDown(bool extend) {
     moveAll(extend, true, [this](const Cursor& c) {
         Position p = c.pos;
-        size_t nv = m_folding.nextVisible(p.line);
-        if (nv >= m_buffer.lineCount()) p.col = m_buffer.lineLength(p.line);
-        else { p.line = nv; p.col = Utf8::byteAtColumn(m_buffer.line(p.line), goalVisual(c), m_indent.width); }
+        if (!stepRow(c.pos, 1, goalVisual(c), p)) p.col = m_buffer.lineLength(p.line);
         return p;
     });
 }
@@ -515,16 +564,10 @@ void TextView::addCursorVertical(int dir) {
     size_t newMain = m_main;
     for (size_t i = 0; i < oldCount; ++i) {
         Cursor from = m_cursors[i];
-        size_t line;
-        if (dir < 0) {
-            if (from.pos.line == 0) continue;
-            line = m_folding.prevVisible(from.pos.line);
-        } else {
-            line = m_folding.nextVisible(from.pos.line);
-            if (line >= m_buffer.lineCount()) continue;
-        }
         size_t goal = goalVisual(from);
-        Position p = m_buffer.clamp(Position{line, Utf8::byteAtColumn(m_buffer.line(line), goal, m_indent.width)});
+        Position p;
+        if (!stepRow(from.pos, dir, goal, p)) continue;
+        p = m_buffer.clamp(p);
         Cursor c;
         c.pos = c.anchor = p;
         c.goalCol = from.goalCol;
@@ -1490,6 +1533,7 @@ bool TextView::selectionEndsAtFoldEnd(const Cursor& c) const {
 // A selection that reaches the end of a folded header line takes the hidden lines with it.
 void TextView::snapSelectionsToFolds() {
     if (m_suppressFoldSnap) return;
+    bool grew = false;
     for (Cursor& c : m_cursors) {
         if (!c.hasSelection()) continue;
         bool posIsEnd = posBefore(c.anchor, c.pos);
@@ -1501,7 +1545,9 @@ void TextView::snapSelectionsToFolds() {
         Position ne{last, m_buffer.lineLength(last)};
         if (posIsEnd) { c.pos = ne; c.goalCol = ne.col; }
         else c.anchor = ne;
+        grew = true;
     }
+    if (grew) MultiCursor::normalize(m_cursors, m_main);   // a grown selection can reach over the next cursors
 }
 
 bool TextView::isFoldSelected(size_t line) const {

@@ -24,6 +24,8 @@ class EditorController : public QObject {
     Q_PROPERTY(EditorRowsModel* rows READ rows CONSTANT)
     Q_PROPERTY(QVariantList sticky READ sticky NOTIFY stickyChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY documentChanged)
+    Q_PROPERTY(bool canRedo READ canRedo NOTIFY documentChanged)
 
 public:
 
@@ -39,6 +41,8 @@ public:
     EditorRowsModel* rows() { return &m_rows; }
     QVariantList sticky() const { return m_sticky; }
     QString status() const { return m_status; }
+    bool canUndo() const { return m_tabs.current().view.canUndo(); }
+    bool canRedo() const { return m_tabs.current().view.canRedo(); }
 
     // What the other controllers (find, dialogs, tabs, status bar) use. They are not for QML.
     InputState& inputState() { return m_state; }

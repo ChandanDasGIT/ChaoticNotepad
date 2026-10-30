@@ -190,6 +190,9 @@ bool DialogController::checkExternalChange() {
         st.status = msg;
         return true;
     }
+    long long time = 0, size = 0;
+    if (tab.id == m_quietTabId && FileIO::statFile(tab.doc.path(), time, size) && time == m_quietTime && size == m_quietSize)
+        return false;
     m_for = For::DiskChanged;
     m_tabId = tab.id;
     m_dialog.show("File changed on disk",
@@ -227,7 +230,11 @@ void DialogController::onResult(Dialog::Result r) {
         const size_t i = indexOfTab(m_tabId);
         if (i >= tabs.count()) return;
         if (choice == 0) st.status = ed->saveTab(tabs.at(i));
-        else st.status = "save cancelled";
+        else {
+            st.status = "save cancelled";
+            m_quietTabId = m_tabId;
+            FileIO::statFile(tabs.at(i).doc.path(), m_quietTime, m_quietSize);
+        }
         return;
     }
 

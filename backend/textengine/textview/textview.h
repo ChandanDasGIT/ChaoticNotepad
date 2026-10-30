@@ -40,6 +40,10 @@ public:
     void shiftTab();                // Shift+Tab: outdent
     void deleteWord(bool forward);  // Ctrl+Delete (true) / Ctrl+Backspace (false)
 
+    // ---- word wrap ----
+    // Up / Down move by screen rows when the front end wraps lines: give the same numbers it wraps with. 0 = no wrapping.
+    void setWrap(size_t width, size_t tabWidth);
+
     // ---- cursor / selection ----
     void moveCursor(Position p, bool extend = false);  // click = false (single cursor), drag = true
     void moveLeft(bool extend = false);
@@ -163,7 +167,8 @@ private:
     const Cursor& mainCursor() const;
 
     void moveAll(bool extend, bool keepGoal, const std::function<Position(const Cursor&)>& target);
-    size_t goalVisual(const Cursor& c) const;   // the display column Up / Down try to keep
+    size_t goalVisual(const Cursor& c) const;   // the display column in its row that Up / Down try to keep
+    bool stepRow(Position from, int dir, size_t goal, Position& to) const;   // the place one screen row up or down; false at the end of the text
     void finishMove();
     void syncTypingStyle();
     void selectMatch(const Range& r);
@@ -190,6 +195,8 @@ private:
     bool m_suppressFoldSnap = false;                      // set during a shrinking move so the snap doesn't undo it
     void moveCursorsOutOfFolds();      // after folding: cursors inside the fold go to its header
     IndentStyle m_indent;
+    size_t m_wrapWidth = 0;                               // 0 = no wrapping
+    size_t m_wrapTab = 4;
     unsigned long long m_styleStamp = 0;                  // goes up when formatting changes or undo/redo puts other formatting back
     bool m_autoClose = true;
 

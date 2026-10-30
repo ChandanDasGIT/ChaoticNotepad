@@ -56,11 +56,18 @@ void SettingsController::applyToTabs() {
     bool changedAny = false;
     for (size_t i = 0; i < tabs.count(); ++i) {
         TextView& v = tabs.at(i).view;
-        if (v.indent().useTabs != style.useTabs || v.indent().width != style.width) { v.setIndent(style); changedAny = true; }
+        const bool fileDecides = tabs.at(i).doc.hasOwnIndent();
+        if (!fileDecides && (v.indent().useTabs != style.useTabs || v.indent().width != style.width)) { v.setIndent(style); changedAny = true; }
         if (v.autoClose() != m_autoClose) { v.setAutoClose(m_autoClose); changedAny = true; }
     }
     // tell the status bar (and the rest) once, after this call has finished; the second pass changes nothing, so it stops there
     if (changedAny) QTimer::singleShot(0, this, [] { EditorController::instance()->changedOutside(false); });
+}
+
+void SettingsController::overrideFileIndent() {
+    TabManager& tabs = EditorController::instance()->tabs();
+    for (size_t i = 0; i < tabs.count(); ++i) tabs.at(i).doc.clearOwnIndent();
+    applyToTabs();
 }
 
 void SettingsController::syncMinimap() {
@@ -98,7 +105,7 @@ void SettingsController::setIndentWidth(int width) {
     width = std::clamp(width, 1, 16);
     if (width == m_indentWidth) return;
     m_indentWidth = width;
-    applyToTabs();
+    overrideFileIndent();
     store();
     emit changed();
 }
@@ -106,7 +113,7 @@ void SettingsController::setIndentWidth(int width) {
 void SettingsController::setUseTabs(bool on) {
     if (on == m_useTabs) return;
     m_useTabs = on;
-    applyToTabs();
+    overrideFileIndent();
     store();
     emit changed();
 }

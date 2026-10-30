@@ -22,6 +22,9 @@ struct VisualRow {
 // A wide character (CJK) still counts as one column: the engine does not know how wide the front end draws it.
 std::vector<VisualRow> layout(const TextBuffer& b, size_t width, size_t tabWidth = 4);
 
+// The same for one line: `s` is its text, `line` its number.
+std::vector<VisualRow> layoutLine(const std::string& s, size_t line, size_t width, size_t tabWidth = 4);
+
 // Text position -> row and column. 0-based; the column is a BYTE offset from the start of the row
 // (always on a character boundary). A front end that counts screen cells converts it itself.
 void toScreen(const std::vector<VisualRow>& rows, Position p, size_t& row, size_t& col);

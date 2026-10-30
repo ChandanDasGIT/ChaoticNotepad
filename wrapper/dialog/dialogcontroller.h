@@ -69,5 +69,8 @@ private:
     int m_quitTriedId = 0;
     bool m_advancing = false;
     bool m_quitConfirmed = false;      // the program decided to quit: the window may close without asking again
+    int m_quietTabId = 0;              // you cancelled a save over this file's outside change: no box until it changes again
+    long long m_quietTime = 0;
+    long long m_quietSize = 0;
     QTimer m_poll;                     // looks for changes made to the open file by other programs
 };

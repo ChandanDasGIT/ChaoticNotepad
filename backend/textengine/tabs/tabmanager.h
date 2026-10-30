@@ -65,6 +65,7 @@ public:
     unsigned long long changeCount() const { return m_changes; }
 
     // ---- state ----
+    bool openElsewhere(const std::string& path, size_t index) const;   // a tab other than `index` holds this file
     bool modified(size_t i) const;
     size_t modifiedCount() const;
     std::string title(size_t i) const;

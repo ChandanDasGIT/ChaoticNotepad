@@ -85,6 +85,8 @@ ApplicationWindow {
         BottomToolbar {
             Layout.fillWidth: true
             Layout.preferredHeight: Theme.bottomBarHeight
+            canUndo: EditorController.canUndo
+            canRedo: EditorController.canRedo
             onNewClicked: TabsController.newTab()
             onOpenClicked: BrowserController.openFile()
             onSaveClicked: EditorController.save()

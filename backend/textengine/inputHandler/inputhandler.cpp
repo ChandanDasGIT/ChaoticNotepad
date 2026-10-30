@@ -412,9 +412,8 @@ void ctrlLetter(char l, Mods m, TextView& view, InputState& st) {
             }
             return;
         }
-        return;
+        if (l != 's' && l != 'o') return;                                // saving and opening also work from the find bar
     }
-    if (st.mode != InputMode::Edit) return;
 
     switch (l) {
         case 's':                                                        // Ctrl+S: save (Ctrl+Shift+S: save as)
@@ -464,12 +463,12 @@ void altLetter(char l, TextView& view, InputState& st) {
         if (l == 'h') st.browser.toggleHidden();
         return;
     }
-    if (st.mode == InputMode::Edit && l == 'm') {                       // Alt+M: show or hide the minimap
+    if (l == 'm') {                                                     // Alt+M: show or hide the minimap
         st.minimapOn = !st.minimapOn;
         st.status = st.minimapOn ? "minimap on" : "minimap off";
         return;
     }
-    if (st.mode == InputMode::Edit && l == 's') {                       // Alt+S: save as
+    if (l == 's') {                                                     // Alt+S: save as
         openPrompt(st, PromptKind::SaveAs);
         return;
     }

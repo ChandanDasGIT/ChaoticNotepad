@@ -18,7 +18,8 @@ public:
 
     // Looks at how a text is indented: tabs, or spaces (and how many per level). Used when a file is opened,
     // so Tab in that file inserts what the file already uses. No indented lines: 4 spaces.
-    static IndentStyle detectIndent(const std::string& text);
+    // `found` (optional) says whether the text really shows an indentation, or the result is only the default.
+    static IndentStyle detectIndent(const std::string& text, bool* found = nullptr);
 
     bool hasPath() const { return !m_path.empty(); }
     const std::string& path() const { return m_path; }
@@ -26,6 +27,10 @@ public:
     bool modified(const TextView& view) const;        // true if the text differs from the last save
     std::string lineEndingName() const { return m_crlf ? "CRLF" : "LF"; }   // what a save writes
     const std::string& encodingName() const { return m_encoding; }          // see FileIO::detectEncoding
+
+    // The file showed its own indentation when it was read, so Tab keeps to that. Otherwise the program's setting applies.
+    bool hasOwnIndent() const { return m_ownIndent; }
+    void clearOwnIndent() { m_ownIndent = false; }
 
     // ---- changes made to the file by someone else ----
     // Compares the file on disk with what this document last read or wrote. Cheap: only a stat() unless
@@ -45,7 +50,9 @@ private:
 
     std::string m_path;
     std::string m_savedText;
-    bool m_crlf = false;                              // file used Windows line endings
+    bool m_crlf = false;                              // most line breaks of the file are Windows ones: a save writes those
+    std::string m_mixedRaw;                           // the file as read, when its line breaks are mixed: an unedited save writes it back
+    bool m_ownIndent = false;                         // see hasOwnIndent()
     bool m_bom = false;                               // file started with a UTF-8 BOM: not shown in the text, written again on save
     std::string m_encoding = "UTF-8";                 // found when the file was opened, checked again on save
 
