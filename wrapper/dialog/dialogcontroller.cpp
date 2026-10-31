@@ -54,6 +54,7 @@ size_t DialogController::indexOfTab(int id) const {
 }
 
 void DialogController::quitApp() {
+    if (m_quitForUpdate) emit quittingForUpdate();
     m_quitConfirmed = true;            // quit() asks the window to close: it must not ask about unsaved changes again
     QGuiApplication::quit();
 }
@@ -139,9 +140,10 @@ void DialogController::requestClose(size_t index) {
     emit changed();
 }
 
-void DialogController::requestQuit() {
+void DialogController::requestQuit(bool forUpdate) {
     if (m_quitting) return;
     m_quitting = true;
+    m_quitForUpdate = forUpdate;
     m_quitSkipped.clear();
     askNextBeforeQuit();
 }
@@ -270,7 +272,6 @@ void DialogController::onResult(Dialog::Result r) {
 
     if (r == Dialog::Result::Cancel) {
         st.status = m_quitting ? "quit cancelled" : "cancelled";
-        if (m_quitting) emit quitCancelled();
         m_quitting = false;
         return;
     }
@@ -335,7 +336,6 @@ void DialogController::advance() {
         if (i < tabs.count() && tabs.modified(i)) {            // cancelled or failed: stay on this tab
             m_quitting = false;
             st.status = "quit cancelled";
-            emit quitCancelled();
             ed->changedOutside(false);
         } else {
             askNextBeforeQuit();

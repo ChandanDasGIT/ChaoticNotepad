@@ -1,12 +1,15 @@
 #pragma once
 #include <QByteArray>
+#include <QCryptographicHash>
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QTimer>
+#include <QUrl>
 #include <QtQml/qqmlregistration.h>
+#include <functional>
 
 class QNetworkReply;
 
@@ -73,6 +76,8 @@ private:
     void fail(const QString& text);
     bool stageInUse() const;          // an update script is working in the update's folder
     QNetworkReply* get(const QString& url);
+    void fetch(const QString& url, const std::function<void(QNetworkReply*)>& started);   // a release file: see the .cpp
+    void pickAddress(const QUrl& url, const std::function<void(const QString&)>& picked);
     void setStatus(const QString& text);
     QString releaseFileUrl(const QString& name) const;
 
@@ -82,7 +87,7 @@ private:
     QString m_status;
     bool m_busy = false;
     bool m_ready = false;
-    bool m_restartWanted = false;     // quitting now means installing
+    bool m_restartWanted = false;     // set only once the update's quit is going ahead
     bool m_autoCheck = true;
 
     QString m_installed;              // what the update replaces: the program's folder, or the AppImage
@@ -92,6 +97,9 @@ private:
     QByteArray m_manifest;
     QString m_fileName;               // from the signed manifest
     QByteArray m_fileHash;
+    QString m_goodHost;               // an address of this host answered: the next files use it too
+    QString m_goodAddress;
     QFile m_download;
+    QCryptographicHash m_hash{QCryptographicHash::Sha256};   // of the download, as it arrives: no pause at the end
     QTimer m_dailyCheck;              // an editor can stay open for days
 };

@@ -40,14 +40,14 @@ public:
 
     // The questions. The editor calls these.
     void requestClose(size_t tabIndex);                          // closes it, or asks first when it has unsaved changes
-    void requestQuit();                                          // quits, or asks about each unsaved tab first
+    void requestQuit(bool forUpdate = false);                    // quits, or asks about each unsaved tab first
     Q_INVOKABLE bool closeRequested();                           // the window was asked to close (X, Super+C): true = let it close, false = the unsaved changes box was shown
     void showSaveConflict(int tabId, const std::string& name);   // "the file changed on disk: overwrite?"
     void showNotice(const std::string& title, const std::vector<std::string>& lines);   // something to read, with an OK button
 
 signals:
     void changed();
-    void quitCancelled();              // the program is staying open after all
+    void quittingForUpdate();          // every question was answered and the update's quit is going ahead
 
 private:
     // Private on purpose: there is exactly one, made by instance(). QML gets it through create().
@@ -70,6 +70,7 @@ private:
     int m_tabId = 0;                   // the tab the box is about
     int m_closeAfterSaveId = 0;        // close this tab as soon as its save has finished
     bool m_quitting = false;           // going through the unsaved tabs before quitting
+    bool m_quitForUpdate = false;      // this quit was asked for by the update
     int m_quitSaveId = 0;              // quitting: the tab being saved now
     std::vector<int> m_quitSkipped;    // quitting: the tabs you answered "Don't save" for
     bool m_advancing = false;

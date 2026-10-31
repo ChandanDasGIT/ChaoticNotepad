@@ -6,6 +6,8 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QHostAddress>
+#include <QHostInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkReply>
@@ -14,10 +16,12 @@
 #include <QRegularExpression>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QTcpSocket>
 #include <QTimer>
 #include <QUrl>
 #include <QVersionNumber>
 #include <fcntl.h>
+#include <memory>
 #include <sys/file.h>
 #include <unistd.h>
 #include "third_party/monocypher/monocypher-ed25519.h"
@@ -39,7 +43,8 @@ namespace {
 const qint64 kCheckEverySeconds = 24 * 60 * 60;
 const int kFirstCheckDelayMs = 3000;
 const int kCheckIntervalMs = 60 * 60 * 1000;
-const int kNetworkTimeoutMs = 30000;
+const int kNetworkTimeoutMs = 45000;                             // longer than the 30 seconds Qt gives one dead address
+const int kPickAddressMs = 5000;
 const qint64 kUnfinishedAfterSeconds = 10 * 60;                  // a script takes about a minute at most
 const char kStartedVariable[] = "CHAOTICNOTEPAD_UPDATE_STARTED"; // the file the new version creates when it runs
 const char kOldExitedFile[] = "/old-exited";                     // the old program is gone
@@ -105,12 +110,13 @@ bool signatureIsValid(const QByteArray& message, const QByteArray& signature) {
 }
 
 // Runs after the program has quit.  $1 the update's folder   $2 the new copy   $3 the installed copy
-// $4 what to start   the rest: the files to open again.
+// $4 where the new copy goes   $5 what to start   $6 what to start if the old copy comes back
+// the rest: the files to open again. An AppImage changes its name here, to the new version's.
 // The new version gets its own process group, so a stuck one can be stopped together with what it started
 // (an AppImage is more than one process).
 const char kInstallScript[] = R"SCRIPT(#!/bin/sh
-stage=$1; new=$2; installed=$3; program=$4
-shift 4
+stage=$1; new=$2; installed=$3; target=$4; program=$5; old_program=$6
+shift 6
 
 # the old program leaves this file as the last thing it does
 i=0
@@ -120,13 +126,13 @@ backup="$stage/previous"
 if ! mv "$installed" "$backup"; then
     : > "$stage.failed"
     rm -rf "$stage"
-    exec "$program" "$@"
+    exec "$old_program" "$@"
 fi
-if ! mv "$new" "$installed"; then
+if ! mv "$new" "$target"; then
     mv "$backup" "$installed"
     : > "$stage.failed"
     rm -rf "$stage"
-    exec "$program" "$@"
+    exec "$old_program" "$@"
 fi
 
 started="$stage/started"
@@ -152,11 +158,11 @@ if [ ! -e "$started" ]; then                                    # it did not sta
         sleep 2
         kill -s KILL -- "-$pid" 2>/dev/null || kill -s KILL "$pid" 2>/dev/null
     fi
-    rm -rf "$installed"
+    rm -rf "$target"
     mv "$backup" "$installed"
     : > "$stage.failed"
     rm -rf "$stage"
-    "$program" "$@" &
+    "$old_program" "$@" &
     exit 0
 fi
 rm -rf "$stage"
@@ -211,7 +217,7 @@ UpdateController::UpdateController(QObject* parent) : QObject(parent) {
     }
 
     connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, &UpdateController::installOnQuit);
-    connect(DialogController::instance(), &DialogController::quitCancelled, this, [this] { m_restartWanted = false; });
+    connect(DialogController::instance(), &DialogController::quittingForUpdate, this, [this] { m_restartWanted = true; });
 
     m_dailyCheck.setInterval(kCheckIntervalMs);
     connect(&m_dailyCheck, &QTimer::timeout, this, &UpdateController::considerChecking);
@@ -253,6 +259,7 @@ void UpdateController::setAutoCheck(bool on) {
     file().setValue("checkForUpdates", on);
     file().sync();
     emit changed();
+    considerChecking();
 }
 
 void UpdateController::openReleasePage() {
@@ -261,6 +268,59 @@ void UpdateController::openReleasePage() {
 
 QString UpdateController::releaseFileUrl(const QString& name) const {
     return QStringLiteral(UPDATE_SITE_URL "/releases/download/v%1/%2").arg(m_latest, name);
+}
+
+// GitHub's download host has several addresses and one can be dead for a network. Qt tries the first for 30
+// seconds before the next, and keeps that order for a minute. So: try them all at once and use the first that
+// answers. The certificate is still checked against the host's real name.
+void UpdateController::fetch(const QString& url, const std::function<void(QNetworkReply*)>& started) {
+    QNetworkRequest ask{QUrl(url)};
+    ask.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("ChaoticNotepad"));
+    ask.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
+    ask.setTransferTimeout(kNetworkTimeoutMs);
+    QNetworkReply* head = m_net.head(ask);
+    connect(head, &QNetworkReply::finished, this, [this, head, url, started] {
+        head->deleteLater();
+        const QUrl moved = head->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+        const QUrl target = moved.isEmpty() ? QUrl(url) : QUrl(url).resolved(moved);
+        pickAddress(target, [this, target, started](const QString& address) {
+            if (address.isEmpty()) { started(get(target.toString())); return; }        // Qt's own way still works, slowly
+            QUrl direct = target;
+            direct.setHost(address);
+            QNetworkRequest request{direct};
+            request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("ChaoticNotepad"));
+            request.setTransferTimeout(kNetworkTimeoutMs);
+            request.setPeerVerifyName(target.host());
+            request.setRawHeader("Host", target.host().toLatin1());
+            request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);       // HTTP/1 sends the Host above
+            started(m_net.get(request));
+        });
+    });
+}
+
+void UpdateController::pickAddress(const QUrl& url, const std::function<void(const QString&)>& picked) {
+    if (url.host() == m_goodHost) { picked(m_goodAddress); return; }
+    const int port = url.port(url.scheme() == QLatin1String("https") ? 443 : 80);
+    const QString host = url.host();
+    QHostInfo::lookupHost(host, this, [this, host, port, picked](const QHostInfo& info) {
+        auto answered = std::make_shared<bool>(false);
+        auto sockets = std::make_shared<QList<QTcpSocket*>>();
+        const auto finish = [this, host, picked, answered, sockets](const QString& address) {
+            if (*answered) return;
+            *answered = true;
+            if (!address.isEmpty()) { m_goodHost = host; m_goodAddress = address; }
+            for (QTcpSocket* socket : *sockets) socket->deleteLater();
+            picked(address);
+        };
+        for (const QHostAddress& address : info.addresses()) {
+            auto* socket = new QTcpSocket(this);
+            sockets->append(socket);
+            connect(socket, &QTcpSocket::connected, this, [finish, address] { finish(address.toString()); });
+            socket->connectToHost(address, static_cast<quint16>(port));
+        }
+        if (sockets->isEmpty()) finish(QString());
+        else QTimer::singleShot(kPickAddressMs, this, [finish] { finish(QString()); });
+    });
 }
 
 // ------------------------------------------------------------------ is there a new version?
@@ -318,7 +378,7 @@ void UpdateController::updateNow() {
 
 // The manifest and its signature come first: nothing else is downloaded unless they are right.
 void UpdateController::downloadManifest() {
-    QNetworkReply* manifest = get(releaseFileUrl(QStringLiteral("update-manifest.txt")));
+    fetch(releaseFileUrl(QStringLiteral("update-manifest.txt")), [this](QNetworkReply* manifest) {
     connect(manifest, &QNetworkReply::finished, this, [this, manifest] {
         manifest->deleteLater();
         if (manifest->error() != QNetworkReply::NoError) {
@@ -326,7 +386,7 @@ void UpdateController::downloadManifest() {
             return;
         }
         m_manifest = manifest->readAll();
-        QNetworkReply* signature = get(releaseFileUrl(QStringLiteral("update-manifest.txt.sig")));
+        fetch(releaseFileUrl(QStringLiteral("update-manifest.txt.sig")), [this](QNetworkReply* signature) {
         connect(signature, &QNetworkReply::finished, this, [this, signature] {
             signature->deleteLater();
             if (signature->error() != QNetworkReply::NoError) {
@@ -362,6 +422,8 @@ void UpdateController::downloadManifest() {
             m_fileHash = chosen[2].toLatin1();
             downloadFile();
         });
+        });
+    });
     });
 }
 
@@ -371,9 +433,11 @@ void UpdateController::downloadFile() {
     if (!m_download.open(QIODevice::WriteOnly)) { fail(QStringLiteral("Could not write the update next to the program.")); return; }
 
     setStatus(QStringLiteral("Downloading…"));
-    QNetworkReply* reply = get(releaseFileUrl(m_fileName));
+    m_hash.reset();
+    fetch(releaseFileUrl(m_fileName), [this](QNetworkReply* reply) {
     const auto save = [this, reply] {
         const QByteArray bytes = reply->readAll();
+        m_hash.addData(bytes);
         if (m_download.write(bytes) != bytes.size()) reply->abort();      // the disk is full
     };
     connect(reply, &QNetworkReply::readyRead, this, save);
@@ -389,16 +453,15 @@ void UpdateController::downloadFile() {
         if (!complete) { fail(QStringLiteral("The download failed. Try again later.")); return; }
         onFileDownloaded();
     });
+    });
 }
 
 void UpdateController::onFileDownloaded() {
-    QFile done(m_download.fileName());
-    QCryptographicHash hash(QCryptographicHash::Sha256);
-    if (!done.open(QIODevice::ReadOnly) || !hash.addData(&done) || hash.result().toHex() != m_fileHash) {
+    if (m_hash.result().toHex() != m_fileHash) {
         fail(QStringLiteral("The download does not match its signature, so it was not installed."));
         return;
     }
-    done.close();
+    QFile done(m_download.fileName());
 
     if (m_kind == Kind::AppImage) {
         m_newCopy = done.fileName();
@@ -438,8 +501,7 @@ void UpdateController::unpack() {
 void UpdateController::askToRestart() {
     if (otherInstancesRunning()) { setStatus(kOtherWindow); return; }             // one may have opened meanwhile
     setStatus(QStringLiteral("Version %1 is ready. Restart to finish.").arg(m_latest));
-    m_restartWanted = true;
-    DialogController::instance()->requestQuit();                   // asks about unsaved tabs; Cancel keeps everything as it is
+    DialogController::instance()->requestQuit(true);               // asks about unsaved tabs; Cancel keeps everything as it is
 }
 
 void UpdateController::installOnQuit() {
@@ -454,7 +516,15 @@ void UpdateController::installOnQuit() {
     leaveMark(m_stage + QLatin1String(kInstallingFile));
     oldExitedMark() = m_stage + QLatin1String(kOldExitedFile);
 
-    QStringList arguments = {scriptPath, m_stage, m_newCopy, m_installed, m_program};
+    // an AppImage takes the new release's name, unless a file already has it
+    QString target = m_installed;
+    if (m_kind == Kind::AppImage) {
+        const QString renamed = QFileInfo(m_installed).path() + QLatin1Char('/') + m_fileName;
+        if (!QFileInfo::exists(renamed)) target = renamed;
+    }
+    const QString newProgram = m_kind == Kind::AppImage ? target : m_program;
+
+    QStringList arguments = {scriptPath, m_stage, m_newCopy, m_installed, target, newProgram, m_program};
     TabManager& tabs = EditorController::instance()->tabs();       // the same files open again
     for (size_t i = 0; i < tabs.count(); ++i)
         if (!tabs.at(i).doc.path().empty()) arguments << QString::fromStdString(tabs.at(i).doc.path());

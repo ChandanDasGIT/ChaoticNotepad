@@ -76,6 +76,7 @@ Once a day the app asks GitHub for the latest version. Nothing else is sent. Whe
 
 Nothing updates until you choose to:
 
+- **AppImage:** the new file takes the release's name, such as `ChaoticNotepad-2.3.3-x86_64.AppImage`, and the old file is removed. If a shortcut points to the old name, update it.
 - **Tarball and AppImage:** **Update now** downloads the new version and checks its signature. It asks about unsaved tabs, restarts the app and opens your files again. If the new version crashes or hangs on start, the old one comes back and a message tells you. Close any other ChaoticNotepad windows first.
 - **Installed with `sudo ./install.sh`:** this needs root, so the app shows a link to the release page instead. Update the project and run `sudo ./install.sh` again.
 
