@@ -49,6 +49,11 @@ if command -v update-desktop-database > /dev/null 2>&1; then
   update-desktop-database "$MENU_DIR" > /dev/null 2>&1 || true
 fi
 
+# A copy from sudo ./install.sh can stay beside this one. This script has no root rights to remove it.
+if [ -e /usr/local/bin/appChaoticNotepad ]; then
+  echo "Note: another copy is installed in /usr/local. To keep only this one, run sudo ./uninstall.sh from the project folder."
+fi
+
 echo "ChaoticNotepad is installed."
 echo "  Program : $APP_DIR"
 echo "  Command : $BIN_DIR/ChaoticNotepad"

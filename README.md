@@ -48,6 +48,8 @@ cd ChaoticNotepad
 sudo ./install.sh
 ```
 
+This replaces a copy installed from the `.tar.xz` release, so only one copy is left. Your settings stay.
+
 ## Uninstallation
 
 If installed from the `.tar.xz` release, run this from the extracted folder, without sudo. Your documents and settings stay:
