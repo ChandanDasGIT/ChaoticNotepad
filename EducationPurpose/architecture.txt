@@ -191,7 +191,7 @@ ChaoticNotepad/
 ├── .gitignore                          // what git leaves out: build output, packaging tools, caches, editor files
 ├── ChaoticNotepad.desktop              // the app menu entry
 ├── ChaoticNotepad.svg                  // the app icon
-├── CMakeLists.txt                      // the build: textengine library, app and QML module, Qt 6.10 or newer, install rules, version 2.3.2 (a release build passes its tag instead)
+├── CMakeLists.txt                      // the build: textengine library, app and QML module, Qt 6.10 or newer, install rules, version 2.3.3 (a release build passes its tag instead)
 ├── Features.txt                        // feature list of version 2.0
 ├── install.sh                          // as root: builds and installs into /usr/local, then removes a tarball copy from the user's home so only one copy is left
 ├── LICENSE                             // the GNU GPL v3 license

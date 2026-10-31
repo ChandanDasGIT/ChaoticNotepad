@@ -227,7 +227,7 @@ bool UpdateController::stageInUse() const {
 QNetworkReply* UpdateController::get(const QString& url) {
     QNetworkRequest request{QUrl(url)};
     request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("ChaoticNotepad"));
-    request.setRawHeader("Accept", "application/vnd.github+json");
+    if (url.startsWith(QLatin1String(UPDATE_API_URL))) request.setRawHeader("Accept", "application/vnd.github+json");
     request.setTransferTimeout(kNetworkTimeoutMs);
     return m_net.get(request);
 }
@@ -370,6 +370,7 @@ void UpdateController::downloadFile() {
     m_download.setFileName(m_stage + QLatin1Char('/') + m_fileName);
     if (!m_download.open(QIODevice::WriteOnly)) { fail(QStringLiteral("Could not write the update next to the program.")); return; }
 
+    setStatus(QStringLiteral("Downloading…"));
     QNetworkReply* reply = get(releaseFileUrl(m_fileName));
     const auto save = [this, reply] {
         const QByteArray bytes = reply->readAll();
@@ -378,6 +379,7 @@ void UpdateController::downloadFile() {
     connect(reply, &QNetworkReply::readyRead, this, save);
     connect(reply, &QNetworkReply::downloadProgress, this, [this](qint64 done, qint64 total) {
         if (total > 0) setStatus(QStringLiteral("Downloading… %1%").arg(done * 100 / total));
+        else setStatus(QStringLiteral("Downloading… %1 MB").arg(done / (1024 * 1024)));    // the server did not give the size
     });
     connect(reply, &QNetworkReply::finished, this, [this, reply, save] {
         reply->deleteLater();
