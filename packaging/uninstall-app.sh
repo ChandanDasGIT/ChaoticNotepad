@@ -4,7 +4,7 @@ set -euo pipefail
 
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 
-rm -rf  "$DATA/ChaoticNotepad"
+rm -rf  "$DATA/ChaoticNotepad" "$DATA/ChaoticNotepad.update"
 rm -f   "$HOME/.local/bin/ChaoticNotepad"
 rm -f   "$DATA/applications/ChaoticNotepad.desktop"
 rm -f   "$DATA/icons/hicolor/scalable/apps/ChaoticNotepad.svg"

@@ -4,6 +4,7 @@
 #include <QList>
 #include <QUrl>
 #include "wrapper/editor/editorcontroller.h"
+#include "wrapper/update/updatecontroller.h"
 
 int main(int argc, char *argv[])
 {
@@ -18,6 +19,7 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
     engine.loadFromModule("ChaoticNotepad", "Main");
+    if (!engine.rootObjects().isEmpty()) UpdateController::reportStarted();
 
     // files named on the command line open in tabs: appChaoticNotepad a.txt "my notes.md"
     QList<QUrl> urls;

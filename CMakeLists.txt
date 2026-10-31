@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(ChaoticNotepad VERSION 2.3 LANGUAGES CXX)
+project(ChaoticNotepad VERSION 2.3.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Quick Network)
 
 qt_standard_project_setup(REQUIRES 6.10)
 
@@ -38,6 +38,8 @@ set_source_files_properties(frontend/Icon.qml  PROPERTIES QT_QML_SINGLETON_TYPE 
 
 qt_add_executable(appChaoticNotepad
     main.cpp
+    third_party/monocypher/monocypher.c
+    third_party/monocypher/monocypher-ed25519.c
 )
 
 qt_add_qml_module(appChaoticNotepad
@@ -81,7 +83,7 @@ set_target_properties(appChaoticNotepad PROPERTIES
 )
 
 target_link_libraries(appChaoticNotepad
-    PRIVATE Qt6::Quick textengine
+    PRIVATE Qt6::Quick Qt6::Network textengine
 )
 
 # Installation targets for packaging & desktop integration

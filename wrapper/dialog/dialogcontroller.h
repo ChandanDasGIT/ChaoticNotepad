@@ -46,6 +46,7 @@ public:
 
 signals:
     void changed();
+    void quitCancelled();              // the program is staying open after all
 
 private:
     // Private on purpose: there is exactly one, made by instance(). QML gets it through create().

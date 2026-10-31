@@ -262,6 +262,7 @@ void DialogController::onResult(Dialog::Result r) {
 
     if (r == Dialog::Result::Cancel) {
         st.status = m_quitting ? "quit cancelled" : "cancelled";
+        if (m_quitting) emit quitCancelled();
         m_quitting = false;
         return;
     }
@@ -326,6 +327,7 @@ void DialogController::advance() {
         if (i < tabs.count() && tabs.modified(i)) {            // cancelled or failed: stay on this tab
             m_quitting = false;
             st.status = "quit cancelled";
+            emit quitCancelled();
             ed->changedOutside(false);
         } else {
             askNextBeforeQuit();

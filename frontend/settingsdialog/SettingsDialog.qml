@@ -16,6 +16,8 @@ import QtQuick.Layouts
 //   setDarkTheme(on), setFontFamily(name), setFontSize(n), setIndentWidth(n), setUseTabs(on),
 //   setAutoCloseBrackets(on), setShowMinimap(on), setHidePointerWhileTyping(on)
 //   qtVersion
+// and from UpdateController (the About page): available, latestVersion, status, busy, canInstall, readyToRestart,
+//   autoCheck, setAutoCheck(on), checkNow(), updateNow(), openReleasePage()
 Item {
     id: root
 
@@ -96,6 +98,34 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: side.clicked()
+        }
+    }
+
+    // a small button on the About page
+    component AboutButton: Rectangle {
+        id: aboutButton
+        property string label: ""
+        signal clicked()
+        implicitWidth: buttonText.implicitWidth + 24
+        implicitHeight: 28
+        radius: 5
+        opacity: enabled ? 1 : 0.4
+        color: buttonArea.containsMouse ? Theme.hoverBg : Theme.findFieldBg
+        border.width: 1
+        border.color: Theme.findFieldBorder
+        Text {
+            id: buttonText
+            anchors.centerIn: parent
+            text: aboutButton.label
+            color: Theme.text
+            font.pixelSize: Theme.uiFontSize + 1
+        }
+        MouseArea {
+            id: buttonArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: aboutButton.clicked()
         }
     }
 
@@ -410,6 +440,41 @@ Item {
                     Layout.fillWidth: true
                     title: "Version"
                     AboutValue { text: Application.version }
+                }
+                SettingsRow {
+                    visible: root.page === "about"
+                    Layout.fillWidth: true
+                    title: "Updates"
+                    description: UpdateController.status !== "" ? UpdateController.status
+                                 : UpdateController.available ? "Version " + UpdateController.latestVersion + " is available."
+                                 : "See if a new version is out."
+                    AboutButton {
+                        visible: !UpdateController.available
+                        enabled: !UpdateController.busy
+                        label: "Check now"
+                        onClicked: UpdateController.checkNow()
+                    }
+                    AboutButton {
+                        visible: UpdateController.available && UpdateController.canInstall
+                        enabled: !UpdateController.busy
+                        label: UpdateController.readyToRestart ? "Restart to update" : "Update now"
+                        onClicked: UpdateController.updateNow()
+                    }
+                    AboutButton {
+                        visible: UpdateController.available && !UpdateController.canInstall
+                        label: "Open release page"
+                        onClicked: UpdateController.openReleasePage()
+                    }
+                }
+                SettingsRow {
+                    visible: root.page === "about"
+                    Layout.fillWidth: true
+                    title: "Check for updates"
+                    description: "Once a day, asks GitHub for the latest version. A green dot in the bottom bar shows a new one."
+                    SettingsSwitch {
+                        checked: UpdateController.autoCheck
+                        onToggled: (on) => UpdateController.setAutoCheck(on)
+                    }
                 }
                 SettingsRow {
                     visible: root.page === "about"

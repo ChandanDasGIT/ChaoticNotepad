@@ -96,6 +96,7 @@ ApplicationWindow {
             onFindClicked: FindController.openFind()
             onShortcutsClicked: settingsDialog.open("shortcuts")
             onSettingsClicked: settingsDialog.open()
+            onUpdateClicked: settingsDialog.open("about")
         }
     }
 

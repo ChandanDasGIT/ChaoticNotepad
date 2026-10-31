@@ -17,6 +17,7 @@ Rectangle {
     signal findClicked()
     signal shortcutsClicked()
     signal settingsClicked()
+    signal updateClicked()
 
     implicitHeight: Theme.bottomBarHeight
     color: Theme.bottomBarBg
@@ -40,7 +41,24 @@ Rectangle {
 
         Item { Layout.fillWidth: true }
 
-        // ---- right: find, shortcuts and settings ----
+        // ---- right: a dot when a new version is out, find, shortcuts and settings ----
+        Item {
+            visible: UpdateController.available
+            Layout.preferredWidth: 30
+            Layout.fillHeight: true
+            Rectangle {
+                anchors.centerIn: parent
+                width: 10
+                height: 10
+                radius: 5
+                color: Theme.changeSaved
+            }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.updateClicked()
+            }
+        }
         ToolbarButton { icon: Icon.search;   label: "Find";     onClicked: root.findClicked() }
         ToolbarButton { icon: Icon.keyboard; label: "Shortcuts"; onClicked: root.shortcutsClicked() }
         ToolbarButton { icon: Icon.settings; label: "Settings"; onClicked: root.settingsClicked() }
