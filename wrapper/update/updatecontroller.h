@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QTimer>
 #include <QtQml/qqmlregistration.h>
 
 class QNetworkReply;
@@ -20,7 +21,8 @@ class QNetworkReply;
 // gets the dot and a link to the release page.
 //
 // When the new files are ready the program quits (asking about unsaved tabs first) and a small script takes
-// over: it swaps the files and starts the new version. If that does not start, the old one comes back.
+// over: it swaps the files and starts the new version. If that exits, crashes or hangs before it really runs,
+// the old one comes back and says so. While another window of the app is open, no update starts.
 class UpdateController : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -50,8 +52,9 @@ public:
     Q_INVOKABLE void updateNow();
     Q_INVOKABLE void openReleasePage();
 
-    // The new version calls this when its window exists: the script then knows the update worked.
-    static void reportStarted();
+    static void readEnvironment();      // first thing in main: keeps the update's variables away from other programs
+    static void reportStarted();        // the new version runs: the script then knows the update worked
+    static void reportExited();         // last thing in main: the script may now swap the files
 
 signals:
     void changed();
@@ -59,6 +62,7 @@ signals:
 private:
     enum class Kind { Tarball, AppImage, Manual };
 
+    void considerChecking();
     void check(bool byHand);
     void downloadManifest();
     void downloadFile();
@@ -67,6 +71,8 @@ private:
     void askToRestart();
     void installOnQuit();
     void fail(const QString& text);
+    bool stageInUse() const;          // an update script is working in the update's folder
+    QNetworkReply* get(const QString& url);
     void setStatus(const QString& text);
     QString releaseFileUrl(const QString& name) const;
 
@@ -87,4 +93,5 @@ private:
     QString m_fileName;               // from the signed manifest
     QByteArray m_fileHash;
     QFile m_download;
+    QTimer m_dailyCheck;              // an editor can stay open for days
 };

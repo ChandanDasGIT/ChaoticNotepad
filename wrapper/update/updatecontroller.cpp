@@ -11,11 +11,15 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 #include <QVersionNumber>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
 #include "third_party/monocypher/monocypher-ed25519.h"
 #include "wrapper/dialog/dialogcontroller.h"
 #include "wrapper/editor/editorcontroller.h"
@@ -33,22 +37,60 @@
 
 namespace {
 const qint64 kCheckEverySeconds = 24 * 60 * 60;
-const char kStartedVariable[] = "CHAOTICNOTEPAD_UPDATE_STARTED";     // the file the new version creates when it runs
+const int kFirstCheckDelayMs = 3000;
+const int kCheckIntervalMs = 60 * 60 * 1000;
+const int kNetworkTimeoutMs = 30000;
+const qint64 kUnfinishedAfterSeconds = 10 * 60;                  // a script takes about a minute at most
+const char kStartedVariable[] = "CHAOTICNOTEPAD_UPDATE_STARTED"; // the file the new version creates when it runs
+const char kOldExitedFile[] = "/old-exited";                     // the old program is gone
+const char kInstallingFile[] = "/installing";                    // this folder is in use: don't clean it up
+
+QString& startedFile() { static QString path; return path; }
+QString& appImagePath() { static QString path; return path; }
+QString& appDirPath() { static QString path; return path; }
+QString& oldExitedMark() { static QString path; return path; }
+int instanceLock = -1;
 
 QSettings& file() {
     static QSettings s(QStringLiteral("ChaoticNotepad"), QStringLiteral("ChaoticNotepad"));
     return s;
 }
 
+void leaveMark(const QString& path) {
+    QFile mark(path);
+    if (mark.open(QIODevice::WriteOnly)) mark.close();
+}
+
+// Every running copy of the app keeps this lock, so an update can tell when another window is open.
+void holdInstanceLock() {
+    const QString folder = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + QStringLiteral("/ChaoticNotepad");
+    QDir().mkpath(folder);
+    instanceLock = open(QFile::encodeName(folder + QStringLiteral("/instances.lock")).constData(), O_RDWR | O_CREAT | O_CLOEXEC, 0600);
+    if (instanceLock >= 0) flock(instanceLock, LOCK_SH | LOCK_NB);
+}
+
+bool otherInstancesRunning() {
+    if (instanceLock < 0) return false;
+    if (flock(instanceLock, LOCK_EX | LOCK_NB) != 0) return true;   // someone else holds it too
+    flock(instanceLock, LOCK_SH | LOCK_NB);
+    return false;
+}
+
+const QString kOtherWindow = QStringLiteral("Another ChaoticNotepad window is open. Close it, then try again.");
+
+bool isVersion(const QString& text) {
+    static const QRegularExpression pattern(QStringLiteral("^\\d+(\\.\\d+)*$"));
+    return pattern.match(text).hasMatch();
+}
+
 bool isNewer(const QString& version) {
-    return QVersionNumber::fromString(version) > QVersionNumber::fromString(QCoreApplication::applicationVersion());
+    return isVersion(version) && QVersionNumber::fromString(version) > QVersionNumber::fromString(QCoreApplication::applicationVersion());
 }
 
 // Programs started from here must not get the packaged app's library paths: they are for the app alone.
 QProcessEnvironment cleanEnvironment() {
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    for (const char* name : {"LD_LIBRARY_PATH", "QT_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH",
-                             "APPDIR", "APPIMAGE", "ARGV0", "OWD"})
+    for (const char* name : {"LD_LIBRARY_PATH", "QT_PLUGIN_PATH", "QML_IMPORT_PATH", "QML2_IMPORT_PATH"})
         env.remove(QString::fromLatin1(name));
     return env;
 }
@@ -62,56 +104,93 @@ bool signatureIsValid(const QByteArray& message, const QByteArray& signature) {
                                 static_cast<size_t>(message.size())) == 0;
 }
 
-// Runs after the program has quit.  $1 its pid   $2 the new copy   $3 the installed copy   $4 what to start
-// $5 the update's folder   the rest: the files to open again.
-const char kInstallScript[] = R"(#!/bin/sh
-old_pid=$1; new=$2; installed=$3; program=$4; stage=$5
-shift 5
+// Runs after the program has quit.  $1 the update's folder   $2 the new copy   $3 the installed copy
+// $4 what to start   the rest: the files to open again.
+// The new version gets its own process group, so a stuck one can be stopped together with what it started
+// (an AppImage is more than one process).
+const char kInstallScript[] = R"SCRIPT(#!/bin/sh
+stage=$1; new=$2; installed=$3; program=$4
+shift 4
 
+# the old program leaves this file as the last thing it does
 i=0
-while kill -0 "$old_pid" 2>/dev/null && [ $i -lt 100 ]; do sleep 0.1; i=$((i + 1)); done
+while [ ! -e "$stage/old-exited" ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i + 1)); done
 
 backup="$stage/previous"
-if ! mv "$installed" "$backup"; then exec "$program" "$@"; fi
+if ! mv "$installed" "$backup"; then
+    : > "$stage.failed"
+    rm -rf "$stage"
+    exec "$program" "$@"
+fi
 if ! mv "$new" "$installed"; then
     mv "$backup" "$installed"
+    : > "$stage.failed"
+    rm -rf "$stage"
     exec "$program" "$@"
 fi
 
 started="$stage/started"
 exited="$stage/exited"
 (
-    CHAOTICNOTEPAD_UPDATE_STARTED="$started" "$program" "$@"
-    touch "$exited" 2>/dev/null
+    export CHAOTICNOTEPAD_UPDATE_STARTED="$started"
+    if command -v setsid > /dev/null 2>&1; then
+        setsid --wait sh -c 'echo $$ > "$0"; exec "$@"' "$stage/pid" "$program" "$@"
+    else
+        sh -c 'echo $$ > "$0"; exec "$@"' "$stage/pid" "$program" "$@"
+    fi
+    { : > "$exited"; } 2>/dev/null
 ) &
-i=0
-while [ ! -e "$started" ] && [ ! -e "$exited" ] && [ $i -lt 300 ]; do sleep 0.1; i=$((i + 1)); done
 
-if [ ! -e "$started" ] && [ -e "$exited" ]; then                # it did not start: the old version comes back
+# one minute, for a slow disk: after that it counts as stuck
+deadline=$(($(date +%s) + 60))
+while [ ! -e "$started" ] && [ ! -e "$exited" ] && [ "$(date +%s)" -lt "$deadline" ]; do sleep 0.1; done
+
+if [ ! -e "$started" ]; then                                    # it did not start: the old version comes back
+    if [ ! -e "$exited" ] && [ -s "$stage/pid" ]; then
+        pid=$(cat "$stage/pid")
+        kill -s TERM -- "-$pid" 2>/dev/null || kill -s TERM "$pid" 2>/dev/null
+        sleep 2
+        kill -s KILL -- "-$pid" 2>/dev/null || kill -s KILL "$pid" 2>/dev/null
+    fi
     rm -rf "$installed"
     mv "$backup" "$installed"
-    touch "$stage.failed"
+    : > "$stage.failed"
+    rm -rf "$stage"
     "$program" "$@" &
+    exit 0
 fi
 rm -rf "$stage"
-)";
+)SCRIPT";
+}
+
+void UpdateController::readEnvironment() {
+    startedFile() = qEnvironmentVariable(kStartedVariable);
+    appImagePath() = qEnvironmentVariable("APPIMAGE");
+    appDirPath() = qEnvironmentVariable("APPDIR");
+    for (const char* name : {kStartedVariable, "APPIMAGE", "APPDIR", "ARGV0", "OWD"}) qunsetenv(name);
 }
 
 UpdateController::UpdateController(QObject* parent) : QObject(parent) {
     QSettings& s = file();
     m_autoCheck = s.value("checkForUpdates", true).toBool();
     m_latest = s.value("latestVersion").toString();
+    holdInstanceLock();
 
-    const QString appImage = qEnvironmentVariable("APPIMAGE");
+    // Another program's AppImage can leave its variables behind, so the path only counts if this program runs from it.
+    const QString here = QFileInfo(QCoreApplication::applicationDirPath()).canonicalFilePath();
+    const QString mounted = QFileInfo(appDirPath()).canonicalFilePath();     // empty if that folder is gone
     const QString data = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
     const QString installed = data + QStringLiteral("/ChaoticNotepad");
-    const QString here = QFileInfo(QCoreApplication::applicationDirPath()).canonicalFilePath();
-    if (!appImage.isEmpty() && QFileInfo(QFileInfo(appImage).path()).isWritable()) {
-        m_kind = Kind::AppImage;
-        m_installed = appImage;
-        m_program = appImage;
+    if (!appImagePath().isEmpty() && !mounted.isEmpty() && here.startsWith(mounted + QLatin1Char('/'))) {
+        const QFileInfo image(appImagePath());
+        if (image.isFile() && image.isWritable() && QFileInfo(image.path()).isWritable()) {
+            m_kind = Kind::AppImage;
+            m_installed = image.absoluteFilePath();
+            m_program = m_installed;
+        }
     } else if (here == QFileInfo(installed + QStringLiteral("/usr/bin")).canonicalFilePath()
-               && QFileInfo::exists(installed + QStringLiteral("/AppRun"))) {
+               && QFileInfo::exists(installed + QStringLiteral("/AppRun"))
+               && QFileInfo(installed).isWritable() && QFileInfo(data).isWritable()) {
         m_kind = Kind::Tarball;
         m_installed = installed;
         m_program = installed + QStringLiteral("/AppRun");
@@ -119,17 +198,38 @@ UpdateController::UpdateController(QObject* parent) : QObject(parent) {
 
     if (m_kind != Kind::Manual) {
         m_stage = m_installed + QStringLiteral(".update");
-        if (QFile::remove(m_stage + QStringLiteral(".failed")))
+        if (QFile::remove(m_stage + QStringLiteral(".failed"))) {
             m_status = QStringLiteral("The update did not start, so the previous version was put back.");
-        if (qEnvironmentVariableIsEmpty(kStartedVariable)) QDir(m_stage).removeRecursively();    // left by an unfinished update
+            QTimer::singleShot(0, this, [this] {
+                DialogController::instance()->showNotice("Update not installed",
+                    {"The new version did not start, so the previous version was put back.", "",
+                     "Your files are safe. You can try the update again later."});
+            });
+        }
+        // left by an unfinished update, unless a script or another window is working in there right now
+        if (!stageInUse() && !otherInstancesRunning()) QDir(m_stage).removeRecursively();
     }
 
     connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, this, &UpdateController::installOnQuit);
     connect(DialogController::instance(), &DialogController::quitCancelled, this, [this] { m_restartWanted = false; });
 
-    const qint64 last = s.value("lastUpdateCheck", 0).toLongLong();
-    if (m_autoCheck && QDateTime::currentSecsSinceEpoch() - last >= kCheckEverySeconds)
-        QTimer::singleShot(3000, this, [this] { check(false); });
+    m_dailyCheck.setInterval(kCheckIntervalMs);
+    connect(&m_dailyCheck, &QTimer::timeout, this, &UpdateController::considerChecking);
+    m_dailyCheck.start();
+    QTimer::singleShot(kFirstCheckDelayMs, this, &UpdateController::considerChecking);
+}
+
+bool UpdateController::stageInUse() const {
+    const QFileInfo inUse(m_stage + QLatin1String(kInstallingFile));
+    return inUse.exists() && inUse.lastModified().secsTo(QDateTime::currentDateTime()) < kUnfinishedAfterSeconds;
+}
+
+QNetworkReply* UpdateController::get(const QString& url) {
+    QNetworkRequest request{QUrl(url)};
+    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("ChaoticNotepad"));
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setTransferTimeout(kNetworkTimeoutMs);
+    return m_net.get(request);
 }
 
 bool UpdateController::available() const { return !m_latest.isEmpty() && isNewer(m_latest); }
@@ -165,6 +265,11 @@ QString UpdateController::releaseFileUrl(const QString& name) const {
 
 // ------------------------------------------------------------------ is there a new version?
 
+void UpdateController::considerChecking() {
+    if (!m_autoCheck) return;
+    if (QDateTime::currentSecsSinceEpoch() - file().value("lastUpdateCheck", 0).toLongLong() >= kCheckEverySeconds) check(false);
+}
+
 void UpdateController::checkNow() {
     if (!m_busy) check(true);
 }
@@ -174,15 +279,12 @@ void UpdateController::check(bool byHand) {
     m_busy = true;
     if (byHand) setStatus(QStringLiteral("Checking for updates…"));
 
-    QNetworkRequest request{QUrl(QStringLiteral(UPDATE_API_URL "/releases/latest"))};
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("ChaoticNotepad"));
-    request.setRawHeader("Accept", "application/vnd.github+json");
-    QNetworkReply* reply = m_net.get(request);
+    QNetworkReply* reply = get(QStringLiteral(UPDATE_API_URL "/releases/latest"));
     connect(reply, &QNetworkReply::finished, this, [this, reply, byHand] {
         reply->deleteLater();
         m_busy = false;
         const QString tag = QJsonDocument::fromJson(reply->readAll()).object().value("tag_name").toString();
-        if (reply->error() != QNetworkReply::NoError || !tag.startsWith(QLatin1Char('v'))) {
+        if (reply->error() != QNetworkReply::NoError || !tag.startsWith(QLatin1Char('v')) || !isVersion(tag.mid(1))) {
             if (byHand) setStatus(QStringLiteral("Could not reach GitHub. Try again later."));
             else emit changed();
             return;                                                // quietly: being offline is normal
@@ -202,8 +304,10 @@ void UpdateController::check(bool byHand) {
 
 void UpdateController::updateNow() {
     if (m_busy) return;
+    if (otherInstancesRunning()) { setStatus(kOtherWindow); return; }
     if (m_ready) { askToRestart(); return; }
     if (!available() || !canInstall()) return;
+    if (stageInUse()) { setStatus(QStringLiteral("An update is still finishing. Try again in a minute.")); return; }
 
     QDir(m_stage).removeRecursively();
     if (!QDir().mkpath(m_stage)) { fail(QStringLiteral("Could not write the update next to the program.")); return; }
@@ -214,20 +318,15 @@ void UpdateController::updateNow() {
 
 // The manifest and its signature come first: nothing else is downloaded unless they are right.
 void UpdateController::downloadManifest() {
-    const auto get = [this](const QString& name) {
-        QNetworkRequest request{QUrl(releaseFileUrl(name))};
-        request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("ChaoticNotepad"));
-        return m_net.get(request);
-    };
-    QNetworkReply* manifest = get(QStringLiteral("update-manifest.txt"));
-    connect(manifest, &QNetworkReply::finished, this, [this, manifest, get] {
+    QNetworkReply* manifest = get(releaseFileUrl(QStringLiteral("update-manifest.txt")));
+    connect(manifest, &QNetworkReply::finished, this, [this, manifest] {
         manifest->deleteLater();
         if (manifest->error() != QNetworkReply::NoError) {
             fail(QStringLiteral("This version has no signed update yet. Try again later."));
             return;
         }
         m_manifest = manifest->readAll();
-        QNetworkReply* signature = get(QStringLiteral("update-manifest.txt.sig"));
+        QNetworkReply* signature = get(releaseFileUrl(QStringLiteral("update-manifest.txt.sig")));
         connect(signature, &QNetworkReply::finished, this, [this, signature] {
             signature->deleteLater();
             if (signature->error() != QNetworkReply::NoError) {
@@ -239,21 +338,28 @@ void UpdateController::downloadManifest() {
                 return;
             }
 
+            // ChaoticNotepad update manifest 1
             // version 2.4
             // tarball ChaoticNotepad-2.4-linux-x86_64.tar.xz <sha256>
             // appimage ChaoticNotepad-2.4-x86_64.AppImage <sha256>
-            QString version;
-            const QString wanted = m_kind == Kind::Tarball ? QStringLiteral("tarball") : QStringLiteral("appimage");
-            m_fileName.clear();
-            for (const QString& line : QString::fromUtf8(m_manifest).split(QLatin1Char('\n'))) {
-                const QStringList parts = line.split(QLatin1Char(' '));
-                if (parts.size() == 2 && parts[0] == QLatin1String("version")) version = parts[1];
-                if (parts.size() == 3 && parts[0] == wanted) { m_fileName = parts[1]; m_fileHash = parts[2].toLatin1(); }
-            }
-            if (version != m_latest || !isNewer(version) || m_fileName.isEmpty() || m_fileName.contains(QLatin1Char('/'))) {
+            // Every line must be exactly this. The names can only be these, so the manifest cannot point elsewhere.
+            const QStringList lines = QString::fromUtf8(m_manifest).trimmed().split(QLatin1Char('\n'));
+            const auto words = [&lines](int i) { return lines[i].split(QLatin1Char(' ')); };
+            static const QRegularExpression hash(QStringLiteral("^[0-9a-f]{64}$"));
+            const bool shape = lines.size() == 4 && lines[0] == QLatin1String("ChaoticNotepad update manifest 1")
+                               && words(1).size() == 2 && words(1)[0] == QLatin1String("version")
+                               && words(2).size() == 3 && words(2)[0] == QLatin1String("tarball")
+                               && words(3).size() == 3 && words(3)[0] == QLatin1String("appimage");
+            const QString version = shape ? words(1)[1] : QString();
+            const QStringList chosen = shape ? words(m_kind == Kind::Tarball ? 2 : 3) : QStringList();
+            const QString expected = QStringLiteral("ChaoticNotepad-") + version
+                                     + (m_kind == Kind::Tarball ? QStringLiteral("-linux-x86_64.tar.xz") : QStringLiteral("-x86_64.AppImage"));
+            if (!shape || version != m_latest || !isNewer(version) || chosen[1] != expected || !hash.match(chosen[2]).hasMatch()) {
                 fail(QStringLiteral("The update's details are wrong, so it was not installed."));
                 return;
             }
+            m_fileName = chosen[1];
+            m_fileHash = chosen[2].toLatin1();
             downloadFile();
         });
     });
@@ -264,18 +370,21 @@ void UpdateController::downloadFile() {
     m_download.setFileName(m_stage + QLatin1Char('/') + m_fileName);
     if (!m_download.open(QIODevice::WriteOnly)) { fail(QStringLiteral("Could not write the update next to the program.")); return; }
 
-    QNetworkRequest request{QUrl(releaseFileUrl(m_fileName))};
-    request.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("ChaoticNotepad"));
-    QNetworkReply* reply = m_net.get(request);
-    connect(reply, &QNetworkReply::readyRead, this, [this, reply] { m_download.write(reply->readAll()); });
+    QNetworkReply* reply = get(releaseFileUrl(m_fileName));
+    const auto save = [this, reply] {
+        const QByteArray bytes = reply->readAll();
+        if (m_download.write(bytes) != bytes.size()) reply->abort();      // the disk is full
+    };
+    connect(reply, &QNetworkReply::readyRead, this, save);
     connect(reply, &QNetworkReply::downloadProgress, this, [this](qint64 done, qint64 total) {
         if (total > 0) setStatus(QStringLiteral("Downloading… %1%").arg(done * 100 / total));
     });
-    connect(reply, &QNetworkReply::finished, this, [this, reply] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, save] {
         reply->deleteLater();
-        m_download.write(reply->readAll());
+        if (reply->error() == QNetworkReply::NoError) save();
+        const bool complete = reply->error() == QNetworkReply::NoError && m_download.flush();
         m_download.close();
-        if (reply->error() != QNetworkReply::NoError) { fail(QStringLiteral("The download failed. Try again later.")); return; }
+        if (!complete) { fail(QStringLiteral("The download failed. Try again later.")); return; }
         onFileDownloaded();
     });
 }
@@ -325,6 +434,7 @@ void UpdateController::unpack() {
 // ------------------------------------------------------------------ putting it in place
 
 void UpdateController::askToRestart() {
+    if (otherInstancesRunning()) { setStatus(kOtherWindow); return; }             // one may have opened meanwhile
     setStatus(QStringLiteral("Version %1 is ready. Restart to finish.").arg(m_latest));
     m_restartWanted = true;
     DialogController::instance()->requestQuit();                   // asks about unsaved tabs; Cancel keeps everything as it is
@@ -339,8 +449,10 @@ void UpdateController::installOnQuit() {
     if (!script.open(QIODevice::WriteOnly)) return;
     script.write(kInstallScript);
     script.close();
+    leaveMark(m_stage + QLatin1String(kInstallingFile));
+    oldExitedMark() = m_stage + QLatin1String(kOldExitedFile);
 
-    QStringList arguments = {scriptPath, QString::number(QCoreApplication::applicationPid()), m_newCopy, m_installed, m_program, m_stage};
+    QStringList arguments = {scriptPath, m_stage, m_newCopy, m_installed, m_program};
     TabManager& tabs = EditorController::instance()->tabs();       // the same files open again
     for (size_t i = 0; i < tabs.count(); ++i)
         if (!tabs.at(i).doc.path().empty()) arguments << QString::fromStdString(tabs.at(i).doc.path());
@@ -354,8 +466,12 @@ void UpdateController::installOnQuit() {
 }
 
 void UpdateController::reportStarted() {
-    const QString started = qEnvironmentVariable(kStartedVariable);
-    if (started.isEmpty()) return;
-    QFile mark(started);
-    if (mark.open(QIODevice::WriteOnly)) mark.close();
+    if (!startedFile().isEmpty()) leaveMark(startedFile());
+    startedFile().clear();
+}
+
+// A normal quit means it worked, even in its first two seconds. A crash never gets here.
+void UpdateController::reportExited() {
+    reportStarted();
+    if (!oldExitedMark().isEmpty()) leaveMark(oldExitedMark());
 }

@@ -43,6 +43,7 @@ public:
     void requestQuit();                                          // quits, or asks about each unsaved tab first
     Q_INVOKABLE bool closeRequested();                           // the window was asked to close (X, Super+C): true = let it close, false = the unsaved changes box was shown
     void showSaveConflict(int tabId, const std::string& name);   // "the file changed on disk: overwrite?"
+    void showNotice(const std::string& title, const std::vector<std::string>& lines);   // something to read, with an OK button
 
 signals:
     void changed();
@@ -53,7 +54,7 @@ private:
     // (With a public constructor Qt may build a second one, and then QML and the wrappers talk to different objects.)
     explicit DialogController(QObject* parent = nullptr);
 
-    enum class For { CloseTab, Quit, DiskChanged, SaveConflict };
+    enum class For { CloseTab, Quit, DiskChanged, SaveConflict, Notice };
 
     void handle(Dialog::Result r);
     void onResult(Dialog::Result r);

@@ -192,6 +192,12 @@ void DialogController::showSaveConflict(int tabId, const std::string& name) {
     emit changed();
 }
 
+void DialogController::showNotice(const std::string& title, const std::vector<std::string>& lines) {
+    m_for = For::Notice;
+    m_dialog.show(title, lines, {"OK"}, 0, 0);
+    emit changed();
+}
+
 // Looks at the open file: reloads it quietly if it changed and you have no edits, otherwise asks.
 bool DialogController::checkExternalChange() {
     EditorController* ed = EditorController::instance();
@@ -234,6 +240,8 @@ void DialogController::onResult(Dialog::Result r) {
     TabManager& tabs = ed->tabs();
     InputState& st = ed->inputState();
     const int choice = m_dialog.lastChoice();
+
+    if (m_for == For::Notice) return;
 
     if (m_for == For::DiskChanged) {
         const size_t i = indexOfTab(m_tabId);

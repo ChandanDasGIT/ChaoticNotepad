@@ -2,12 +2,14 @@
 #include <QQmlApplicationEngine>
 #include <QFileInfo>
 #include <QList>
+#include <QTimer>
 #include <QUrl>
 #include "wrapper/editor/editorcontroller.h"
 #include "wrapper/update/updatecontroller.h"
 
 int main(int argc, char *argv[])
 {
+    UpdateController::readEnvironment();
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION));   // the About section shows it
 
@@ -19,7 +21,8 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
     engine.loadFromModule("ChaoticNotepad", "Main");
-    if (!engine.rootObjects().isEmpty()) UpdateController::reportStarted();
+    if (!engine.rootObjects().isEmpty())                                         // a crash this early still counts as not started
+        QTimer::singleShot(2000, &app, [] { UpdateController::reportStarted(); });
 
     // files named on the command line open in tabs: appChaoticNotepad a.txt "my notes.md"
     QList<QUrl> urls;
@@ -30,5 +33,7 @@ int main(int argc, char *argv[])
     }
     if (!urls.isEmpty()) EditorController::instance()->openUrls(urls);
 
-    return QGuiApplication::exec();
+    const int result = QGuiApplication::exec();
+    UpdateController::reportExited();
+    return result;
 }

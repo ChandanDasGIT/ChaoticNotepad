@@ -7,7 +7,7 @@ Left out: build/, build-release/, AppDir/, dist/ and tools/ (generated or downlo
 ChaoticNotepad/
 ├── .github/                            // GitHub settings
 │   └── workflows/                      // what GitHub runs by itself
-│       └── release.yml                 // on a pushed v* tag: builds on Ubuntu 22.04 with Qt 6.10.0, smoke-tests, publishes; run by hand it only builds
+│       └── release.yml                 // on a pushed v* tag: builds on Ubuntu 22.04 with Qt 6.11.2, signs the update, smoke-tests, publishes; run by hand it only builds
 ├── backend/                            // the plain C++ layer; everything in it is the text engine
 │   └── textengine/                     // pure C++17 editor engine, no Qt: built as its own static library
 │       ├── dialog/                     // the question box's logic
@@ -117,35 +117,42 @@ ChaoticNotepad/
 │   │   └── PromptDialog.qml            // draws the 2 or 3 button question: unsaved changes, file changed on disk, save conflict
 │   ├── settingsdialog/                 // the Settings window
 │   │   ├── FontListPanel.qml           // searchable list of the installed fonts
-│   │   ├── SettingsDialog.qml          // the settings panel; also binds font and dark mode to Theme
+│   │   ├── SettingsDialog.qml          // the settings panel: a sidebar of pages (Appearance, Editor, Keyboard shortcuts, About); also binds font and dark mode to Theme
 │   │   ├── SettingsRow.qml             // one line: title, explanation and a control
 │   │   ├── SettingsStepper.qml         // a number with minus and plus buttons
-│   │   └── SettingsSwitch.qml          // on / off switch
-│   ├── shortcutsdialog/                // the Shortcuts window
-│   │   └── ShortcutsDialog.qml         // lists every shortcut; click one and press new keys; restore defaults
+│   │   ├── SettingsSwitch.qml          // on / off switch
+│   │   └── ShortcutsPage.qml           // the Keyboard shortcuts page: lists every shortcut; click one and press new keys; restore defaults
 │   ├── statusbar/                      // the status bar
 │   │   └── BottomStatusbar.qml         // latest message, then counts, position, indent, encoding, line ending, language
 │   ├── tabbar/                         // the tab strip
 │   │   ├── DocumentTab.qml             // one tab: title, unsaved dot or close button, click and drag
 │   │   └── DocumentTabBar.qml          // row of tabs with "+", drag reordering and wheel scrolling
 │   ├── toolbar/                        // the bottom bar
-│   │   ├── BottomToolbar.qml           // New, Open, Save, Save As, Undo, Redo, Find, Shortcuts, Settings; only reports clicks
+│   │   ├── BottomToolbar.qml           // New, Open, Save, Save As, Undo, Redo, the green update dot, Find, Shortcuts, Settings; only reports clicks
 │   │   └── ToolbarButton.qml           // one toolbar button: icon and label
 │   ├── Icon.qml                        // singleton: every icon as a glyph of the icon font, by name
 │   └── Theme.qml                       // singleton: every colour and size, dark and light, syntax colours, editor font
-├── importedcontent/                    // meant for a design downloaded from Figma to Qt; holds only its README
+├── importedcontent/                    // leftover folder from the Figma to Qt plugin
 │   └── README.md                       // says to save a Figma design here; CMakeLists.txt does not actually read this folder
 ├── packaging/                          // making and installing the release files
 │   ├── build-appimage.sh               // builds the app, then the AppImage, the tar.xz and SHA256SUMS.txt in dist/
-│   ├── install-app.sh                  // inside the tar.xz: installs for the current user, no root
-│   └── uninstall-app.sh                // removes what install-app.sh installed; documents and settings stay
+│   ├── install-app.sh                  // inside the tar.xz: installs for the current user, no root; warns if a copy is also in /usr/local
+│   ├── sign-update.sh                  // writes update-manifest.txt and signs it; the release workflow runs it with its two secrets
+│   └── uninstall-app.sh                // removes what install-app.sh installed, and any unfinished update; documents and settings stay
+├── third_party/                        // code from other projects, unchanged
+│   └── monocypher/                     // the small library that checks Ed25519 signatures, which Qt cannot do
+│       ├── LICENCE.md                  // its license: BSD or CC0
+│       ├── monocypher-ed25519.c        // Ed25519 signature checks with SHA-512
+│       ├── monocypher-ed25519.h        // the header for crypto_ed25519_check
+│       ├── monocypher.c                // the library
+│       └── monocypher.h                // the library's main header
 ├── wrapper/                            // Qt C++ layer between QML and the engine: controllers and list models
 │   ├── browser/                        // the file browser for QML
 │   │   ├── browsercontroller.h         // shows the engine's file browser to QML, passes keys and clicks back (BrowserController)
 │   │   └── browsercontroller.cpp       // copies the browser state after every change; its buttons go through EditorController
 │   ├── dialog/                         // the question box for QML
-│   │   ├── dialogcontroller.h          // holds the engine Dialog and the questions the program asks (DialogController)
-│   │   └── dialogcontroller.cpp        // closing, quitting, save conflicts; a 1 second timer checks the open file for outside changes
+│   │   ├── dialogcontroller.h          // holds the engine Dialog, the questions the program asks, and notices with one OK button (DialogController)
+│   │   └── dialogcontroller.cpp        // closing a tab, quitting (one question per unsaved tab), save conflicts; a 1 second timer checks the open file for outside changes
 │   ├── editor/                         // the hub
 │   │   ├── editorcontroller.h          // owns tabs, input state, row builder and sticky scroll; every key and click passes through it (EditorController)
 │   │   ├── editorcontroller.cpp        // turns Qt events into engine events, carries out the engine's requests, rebuilds the rows
@@ -167,25 +174,28 @@ ChaoticNotepad/
 │   │   ├── minimappicture.h            // QML item that draws the minimap cells (MinimapPicture)
 │   │   └── minimappicture.cpp          // paint(): one small square per cell, coloured by syntax token
 │   ├── settings/                       // settings for QML
-│   │   ├── settingscontroller.h        // theme, font, indent, bracket closing and minimap switch (SettingsController)
-│   │   └── settingscontroller.cpp      // reads and writes QSettings, applies bracket closing to every tab, and indent to tabs without their own
+│   │   ├── settingscontroller.h        // theme, font, indent, bracket closing, minimap and hide-pointer switches, and the Qt version for About (SettingsController)
+│   │   └── settingscontroller.cpp      // reads and writes QSettings, applies the indent and bracket choices to every tab
 │   ├── shortcuts/                      // keyboard shortcuts for QML
 │   │   ├── shortcutscontroller.h       // the shortcut list and the keys you chose (ShortcutsController)
 │   │   └── shortcutscontroller.cpp     // builds the list, turns a changed key back into the engine's built-in key, saves in QSettings
 │   ├── status/                         // the status bar for QML
 │   │   ├── statuscontroller.h          // what the status bar shows; only reads, never changes the engine (StatusController)
 │   │   └── statuscontroller.cpp        // reads the current tab after every change; counts lines, words and paragraphs itself
-│   └── tabs/                           // the tab strip for QML
-│       ├── tabscontroller.h            // TabsModel (title and unsaved state of each tab) and TabsController
-│       └── tabscontroller.cpp          // keeps the model in step with TabManager; select, close, new and move
+│   ├── tabs/                           // the tab strip for QML
+│   │   ├── tabscontroller.h            // TabsModel (title and unsaved state of each tab) and TabsController
+│   │   └── tabscontroller.cpp          // keeps the model in step with TabManager; select, close, new and move
+│   └── update/                         // new versions: the green dot and the signed update
+│       ├── updatecontroller.h          // checks GitHub once a day, and downloads, checks and installs an update when you ask (UpdateController)
+│       └── updatecontroller.cpp        // the network requests, the signature check, the install script that swaps the versions and rolls back, the lock that sees other windows
 ├── .gitignore                          // what git leaves out: build output, packaging tools, caches, editor files
 ├── ChaoticNotepad.desktop              // the app menu entry
 ├── ChaoticNotepad.svg                  // the app icon
-├── CMakeLists.txt                      // the build: textengine library, app and QML module, Qt 6.10 or newer, install rules, version 2.0
+├── CMakeLists.txt                      // the build: textengine library, app and QML module, Qt 6.10 or newer, install rules, version 2.3.2 (a release build passes its tag instead)
 ├── Features.txt                        // feature list of version 2.0
-├── install.sh                          // as root: builds and installs into /usr/local
+├── install.sh                          // as root: builds and installs into /usr/local, then removes a tarball copy from the user's home so only one copy is left
 ├── LICENSE                             // the GNU GPL v3 license
-├── main.cpp                            // start of the program: creates the app, loads Main.qml, opens files named on the command line
+├── main.cpp                            // start of the program: reads the update variables, creates the app, sets its version, loads Main.qml, opens files named on the command line
 ├── Main.qml                            // the window: tab bar, gutter + text + minimap, find bar, status bar, toolbar, all dialogs, dropped files
-├── README.md                           // what the app is, how to install, build and uninstall it, the features
+├── README.md                           // what the app is, how to install, update, build and uninstall it, how updates are signed, the features
 └── uninstall.sh                        // as root: removes the install.sh install from /usr/local

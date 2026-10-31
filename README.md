@@ -76,7 +76,7 @@ Once a day the app asks GitHub for the latest version. Nothing else is sent. Whe
 
 Nothing updates until you choose to:
 
-- **Tarball and AppImage:** **Update now** downloads the new version and checks its signature. It asks about unsaved tabs, restarts the app and opens your files again. If the new version does not start, the old one comes back.
+- **Tarball and AppImage:** **Update now** downloads the new version and checks its signature. It asks about unsaved tabs, restarts the app and opens your files again. If the new version crashes or hangs on start, the old one comes back and a message tells you. Close any other ChaoticNotepad windows first.
 - **Installed with `sudo ./install.sh`:** this needs root, so the app shows a link to the release page instead. Update the project and run `sudo ./install.sh` again.
 
 ### How updates are signed
@@ -133,7 +133,7 @@ Interface
 - Settings: theme, font (searchable list of every installed font), font size, indent width, tabs or spaces, closing brackets and quotes, the minimap, and hiding the mouse pointer while you type.
 - Editable keyboard shortcuts with restore defaults, in the settings (the toolbar's Shortcuts button opens them directly).
 - An About section with the version, the Qt version, the license and the source code link.
-- A green dot in the bottom bar when a new version is out. The update is your choice: Update now in the About section downloads it, checks its signature and restarts the app. If the new version does not start, the old one comes back. Tarball and AppImage installs only: an install with `sudo ./install.sh` gets a link to the release page. The daily check can be switched off.
+- A green dot in the bottom bar when a new version is out. The update is your choice: Update now in the About section downloads it, checks its signature and restarts the app. If the new version crashes or hangs on start, the old one comes back. Tarball and AppImage installs only: an install with `sudo ./install.sh` gets a link to the release page. The daily check can be switched off.
 - When you close the app, it shows each unsaved tab in turn and asks whether to save it. Cancel keeps the app open.
 - Status bar with the latest message, cursor position, selection and cursor counts, lines, words, paragraphs, indent setting, encoding, line ending and language.
 

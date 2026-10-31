@@ -40,7 +40,7 @@ Interface
 - Settings: theme, font (searchable list of every installed font), font size, indent width, tabs or spaces, closing brackets and quotes, the minimap, and hiding the mouse pointer while you type.
 - Editable keyboard shortcuts with restore defaults, in the settings (the toolbar's Shortcuts button opens them directly).
 - An About section with the version, the Qt version, the license and the source code link.
-- A green dot in the bottom bar when a new version is out. The update is your choice: Update now in the About section downloads it, checks its signature and restarts the app. If the new version does not start, the old one comes back. Tarball and AppImage installs only: an install with `sudo ./install.sh` gets a link to the release page. The daily check can be switched off.
+- A green dot in the bottom bar when a new version is out. The update is your choice: Update now in the About section downloads it, checks its signature and restarts the app. If the new version crashes or hangs on start, the old one comes back. Tarball and AppImage installs only: an install with `sudo ./install.sh` gets a link to the release page. The daily check can be switched off.
 - When you close the app, it shows each unsaved tab in turn and asks whether to save it. Cancel keeps the app open.
 - Status bar with the latest message, cursor position, selection and cursor counts, lines, words, paragraphs, indent setting, encoding, line ending and language.
   
