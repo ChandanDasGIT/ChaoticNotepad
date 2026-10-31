@@ -1,4 +1,5 @@
 #include "wrapper/dialog/dialogcontroller.h"
+#include <algorithm>
 #include <QGuiApplication>
 #include <QJSEngine>
 #include <QQmlEngine>
@@ -57,10 +58,11 @@ void DialogController::quitApp() {
     QGuiApplication::quit();
 }
 
-// The window was asked to close (the X, Super+C ...). Nothing unsaved: let it close. Otherwise show the
-// "unsaved changes" box and keep the window open; the box quits the program when you have answered.
+// The window was asked to close (the X, Super+C ...). Nothing unsaved: let it close. Otherwise keep the window
+// open and ask about the unsaved tabs; the program quits when you have answered for all of them.
 bool DialogController::closeRequested() {
     if (m_quitConfirmed) return true;
+    if (m_quitting) return false;      // already asking: don't start again from the first tab
     TabManager& tabs = EditorController::instance()->tabs();
     bool unsaved = false;
     for (size_t i = 0; i < tabs.count() && !unsaved; ++i)
@@ -138,23 +140,43 @@ void DialogController::requestClose(size_t index) {
 }
 
 void DialogController::requestQuit() {
+    if (m_quitting) return;
+    m_quitting = true;
+    m_quitSkipped.clear();
+    askNextBeforeQuit();
+}
+
+// Quitting goes through the unsaved tabs one at a time. Save and Don't save move on to the next tab,
+// Cancel stops quitting. When no tab is left the program quits.
+void DialogController::askNextBeforeQuit() {
     EditorController* ed = EditorController::instance();
     TabManager& tabs = ed->tabs();
 
-    std::vector<std::string> names;
-    for (size_t i = 0; i < tabs.count(); ++i)
-        if (tabs.modified(i)) names.push_back(tabs.title(i));
-    if (names.empty()) { quitApp(); return; }
+    size_t next = tabs.count();
+    int left = 0;
+    for (size_t i = 0; i < tabs.count(); ++i) {
+        if (!tabs.modified(i)) continue;
+        if (std::find(m_quitSkipped.begin(), m_quitSkipped.end(), tabs.at(i).id) != m_quitSkipped.end()) continue;
+        if (left == 0) next = i;
+        ++left;
+    }
+    if (left == 0) {
+        m_quitting = false;
+        quitApp();
+        return;
+    }
 
-    std::vector<std::string> lines;
-    lines.push_back(names.size() == 1 ? "1 file has unsaved changes:"
-                                      : std::to_string(names.size()) + " files have unsaved changes:");
-    for (size_t k = 0; k < names.size() && k < 5; ++k) lines.push_back("  \xE2\x80\xA2 " + names[k]);
-    if (names.size() > 5) lines.push_back("  ...and " + std::to_string(names.size() - 5) + " more");
-    lines.push_back("");
-    lines.push_back("Your changes will be lost if you don't save them.");
+    tabs.select(next);
+    ed->changedOutside(false);         // the tab the question is about comes to the front
+
+    std::vector<std::string> lines = {"Do you want to save the changes you made to " + tabs.title(next) + "?",
+                                      "",
+                                      "Your changes will be lost if you don't save them."};
+    if (left > 1)
+        lines.push_back(std::to_string(left - 1) + (left == 2 ? " more unsaved tab after this one." : " more unsaved tabs after this one."));
 
     m_for = For::Quit;
+    m_tabId = tabs.at(next).id;
     m_dialog.show("Unsaved changes", lines);
     emit changed();
 }
@@ -238,7 +260,11 @@ void DialogController::onResult(Dialog::Result r) {
         return;
     }
 
-    if (r == Dialog::Result::Cancel) { st.status = "cancelled"; return; }
+    if (r == Dialog::Result::Cancel) {
+        st.status = m_quitting ? "quit cancelled" : "cancelled";
+        m_quitting = false;
+        return;
+    }
 
     if (m_for == For::CloseTab) {
         const size_t i = indexOfTab(m_tabId);
@@ -252,8 +278,16 @@ void DialogController::onResult(Dialog::Result r) {
             startSave(i);
         }
     } else {
-        if (r == Dialog::Result::DontSave) quitApp();
-        else { m_quitAfterSave = true; m_quitTriedId = 0; }
+        const size_t i = indexOfTab(m_tabId);
+        if (r == Dialog::Result::DontSave || i >= tabs.count()) {
+            m_quitSkipped.push_back(m_tabId);
+            askNextBeforeQuit();
+        } else {
+            m_quitSaveId = m_tabId;
+            m_advancing = true;        // advance() looks at the tab when the save has finished, not halfway through
+            startSave(i);
+            m_advancing = false;
+        }
     }
     advance();
 }
@@ -265,7 +299,7 @@ void DialogController::startSave(size_t tabIndex) {
     ed->sendChar('s', true, false, false);
 }
 
-// Runs after every change: finishes "save, then close" and "save everything, then quit".
+// Runs after every change: finishes "save, then close" and goes on to the next tab after a save while quitting.
 void DialogController::advance() {
     if (m_advancing) return;
     EditorController* ed = EditorController::instance();
@@ -286,25 +320,16 @@ void DialogController::advance() {
         }
     }
 
-    while (m_quitAfterSave) {
-        size_t dirty = tabs.count();
-        for (size_t i = 0; i < tabs.count(); ++i)
-            if (tabs.modified(i)) { dirty = i; break; }
-        if (dirty == tabs.count()) {                           // everything is saved
-            m_quitAfterSave = false;
-            quitApp();
-            break;
-        }
-        const int id = tabs.at(dirty).id;
-        if (id == m_quitTriedId) {                             // we tried this one already: cancelled or failed
-            m_quitAfterSave = false;
+    if (m_quitSaveId != 0 && !m_dialog.active()) {             // an open box here is the save conflict: wait for it
+        const size_t i = indexOfTab(m_quitSaveId);
+        m_quitSaveId = 0;
+        if (i < tabs.count() && tabs.modified(i)) {            // cancelled or failed: stay on this tab
+            m_quitting = false;
             st.status = "quit cancelled";
             ed->changedOutside(false);
-            break;
+        } else {
+            askNextBeforeQuit();
         }
-        m_quitTriedId = id;
-        startSave(dirty);
-        if (st.mode == InputMode::Prompt) break;               // wait for the file name
     }
 
     m_advancing = false;

@@ -107,8 +107,10 @@ Files and tabs
 
 Interface
 - Dark and light themes.
-- Settings: theme, font (searchable list of every installed font), font size, indent width, tabs or spaces, closing brackets and quotes, and the minimap.
-- Editable keyboard shortcuts with restore defaults, and a shortcuts list you can open from the toolbar.
+- Settings: theme, font (searchable list of every installed font), font size, indent width, tabs or spaces, closing brackets and quotes, the minimap, and hiding the mouse pointer while you type.
+- Editable keyboard shortcuts with restore defaults, in the settings (the toolbar's Shortcuts button opens them directly).
+- An About section with the version, the Qt version, the license and the source code link.
+- When you close the app, it shows each unsaved tab in turn and asks whether to save it. Cancel keeps the app open.
 - Status bar with the latest message, cursor position, selection and cursor counts, lines, words, paragraphs, indent setting, encoding, line ending and language.
 
 Packaging

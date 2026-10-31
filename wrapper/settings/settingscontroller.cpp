@@ -19,6 +19,7 @@ SettingsController::SettingsController(QObject* parent) : QObject(parent) {
     m_indentWidth = std::clamp(s.value("indentWidth", m_indentWidth).toInt(), 1, 16);
     m_useTabs = s.value("useTabs", m_useTabs).toBool();
     m_autoClose = s.value("autoCloseBrackets", m_autoClose).toBool();
+    m_hidePointer = s.value("hidePointerWhileTyping", m_hidePointer).toBool();
 
     EditorController* ed = EditorController::instance();
     ed->inputState().minimapOn = s.value("showMinimap", true).toBool();
@@ -44,6 +45,7 @@ void SettingsController::store() {
     s.setValue("indentWidth", m_indentWidth);
     s.setValue("useTabs", m_useTabs);
     s.setValue("autoCloseBrackets", m_autoClose);
+    s.setValue("hidePointerWhileTyping", m_hidePointer);
     s.setValue("showMinimap", showMinimap());
     s.sync();
 }
@@ -122,6 +124,13 @@ void SettingsController::setAutoCloseBrackets(bool on) {
     if (on == m_autoClose) return;
     m_autoClose = on;
     applyToTabs();
+    store();
+    emit changed();
+}
+
+void SettingsController::setHidePointerWhileTyping(bool on) {
+    if (on == m_hidePointer) return;
+    m_hidePointer = on;
     store();
     emit changed();
 }

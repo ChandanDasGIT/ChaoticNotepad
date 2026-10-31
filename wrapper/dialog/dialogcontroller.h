@@ -4,6 +4,7 @@
 #include <QStringList>
 #include <QTimer>
 #include <QtQml/qqmlregistration.h>
+#include <vector>
 #include "textengine/dialog/dialog.h"
 
 class QQmlEngine;
@@ -39,7 +40,7 @@ public:
 
     // The questions. The editor calls these.
     void requestClose(size_t tabIndex);                          // closes it, or asks first when it has unsaved changes
-    void requestQuit();                                          // quits, or asks first
+    void requestQuit();                                          // quits, or asks about each unsaved tab first
     Q_INVOKABLE bool closeRequested();                           // the window was asked to close (X, Super+C): true = let it close, false = the unsaved changes box was shown
     void showSaveConflict(int tabId, const std::string& name);   // "the file changed on disk: overwrite?"
 
@@ -55,7 +56,8 @@ private:
 
     void handle(Dialog::Result r);
     void onResult(Dialog::Result r);
-    void advance();                    // finishes "save, then close" and "save everything, then quit"
+    void advance();                    // finishes "save, then close" and goes on after a save while quitting
+    void askNextBeforeQuit();          // shows the next unsaved tab and asks about it; no tab left: quits
     bool checkExternalChange();        // true if something visible happened
     void startSave(size_t tabIndex);
     size_t indexOfTab(int id) const;
@@ -65,8 +67,9 @@ private:
     For m_for = For::CloseTab;
     int m_tabId = 0;                   // the tab the box is about
     int m_closeAfterSaveId = 0;        // close this tab as soon as its save has finished
-    bool m_quitAfterSave = false;
-    int m_quitTriedId = 0;
+    bool m_quitting = false;           // going through the unsaved tabs before quitting
+    int m_quitSaveId = 0;              // quitting: the tab being saved now
+    std::vector<int> m_quitSkipped;    // quitting: the tabs you answered "Don't save" for
     bool m_advancing = false;
     bool m_quitConfirmed = false;      // the program decided to quit: the window may close without asking again
     int m_quietTabId = 0;              // you cancelled a save over this file's outside change: no box until it changes again

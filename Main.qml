@@ -94,7 +94,7 @@ ApplicationWindow {
             onUndoClicked: EditorController.undo()
             onRedoClicked: EditorController.redo()
             onFindClicked: FindController.openFind()
-            onShortcutsClicked: shortcutsDialog.open()
+            onShortcutsClicked: settingsDialog.open("shortcuts")
             onSettingsClicked: settingsDialog.open()
         }
     }
@@ -113,13 +113,6 @@ ApplicationWindow {
         anchors.fill: parent
         onClosed: editor.forceActiveFocus()
     }
-
-        ShortcutsDialog {
-            id: shortcutsDialog;
-            anchors.fill: parent;
-            onClosed: editor.forceActiveFocus()
-
-        }
 
     // ---- open / save as box ----
     FileBrowserDialog {

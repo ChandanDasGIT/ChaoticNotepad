@@ -8,6 +8,7 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    QGuiApplication::setApplicationVersion(QStringLiteral(APP_VERSION));   // the About section shows it
 
     QQmlApplicationEngine engine;
     QObject::connect(

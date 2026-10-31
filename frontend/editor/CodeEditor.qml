@@ -62,6 +62,7 @@ Item {
     readonly property real stickyHeight: stickyColumn.height
 
     property bool cursorOn: true
+    property bool pointerHidden: false        // typing hid the mouse pointer; moving the mouse or a click brings it back
 
     // what the gutter needs to stay in step with the text
     property alias contentY: list.contentY
@@ -190,9 +191,12 @@ Item {
             anchors.right: parent.right
             anchors.rightMargin: Theme.scrollbarWidth     // the scrollbar keeps its own strip
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-            cursorShape: Qt.IBeamCursor
+            cursorShape: root.pointerHidden ? Qt.BlankCursor : Qt.IBeamCursor
+            hoverEnabled: root.pointerHidden                // moves without a button only matter while it is hidden
 
             property bool dragging: false
+            property bool hiddenPosKnown: false
+            property point hiddenPos
             property int clicks: 0
             property double lastPressTime: 0
             property real lastPressX: 0
@@ -214,6 +218,7 @@ Item {
             }
 
             onPressed: (m) => {
+                root.pointerHidden = false
                 root.forceActiveFocus()
                 root.cursorOn = true
                 blink.restart()
@@ -239,6 +244,10 @@ Item {
                 EditorController.mousePress(rowAt(m.y), cellAt(m.x), m.button, m.modifiers, clicks)
             }
             onPositionChanged: (m) => {
+                if (root.pointerHidden) {                        // Qt also reports a still pointer when the text changes: only a new place counts
+                    if (!hiddenPosKnown) { hiddenPos = Qt.point(m.x, m.y); hiddenPosKnown = true }
+                    else if (m.x !== hiddenPos.x || m.y !== hiddenPos.y) root.pointerHidden = false
+                }
                 if (!dragging) return
                 if (m.y < root.stickyHeight || m.y > root.height)    // outside the text: keep scrolling
                     autoScroll.start()
@@ -278,7 +287,7 @@ Item {
         running: root.activeFocus && Application.styleHints.cursorFlashTime > 0
         onTriggered: root.cursorOn = !root.cursorOn
     }
-    onActiveFocusChanged: { root.cursorOn = true; blink.restart() }
+    onActiveFocusChanged: { root.cursorOn = true; blink.restart(); root.pointerHidden = false }
 
     // ---- the keyboard ----
     Keys.onShortcutOverride: (event) => {
@@ -290,6 +299,12 @@ Item {
             event.accepted = true
             root.cursorOn = true
             blink.restart()
+            // typing: a key that gives text (also Enter, Backspace, Tab), not a shortcut
+            if (SettingsController.hidePointerWhileTyping && event.text !== "" && event.key !== Qt.Key_Escape
+                    && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier))) {
+                if (!root.pointerHidden) mouse.hiddenPosKnown = false
+                root.pointerHidden = true
+            }
         }
     }
 

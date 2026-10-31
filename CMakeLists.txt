@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(ChaoticNotepad VERSION 2.0 LANGUAGES CXX)
+project(ChaoticNotepad VERSION 2.4 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,6 +52,12 @@ qt_add_qml_module(appChaoticNotepad
 )
 
 target_include_directories(appChaoticNotepad PRIVATE "${CMAKE_CURRENT_LIST_DIR}")
+
+# The version the About section shows. A release passes its tag (-DAPP_VERSION=2.4), other builds use the project version.
+if(NOT DEFINED APP_VERSION)
+    set(APP_VERSION "${PROJECT_VERSION}")
+endif()
+target_compile_definitions(appChaoticNotepad PRIVATE APP_VERSION="${APP_VERSION}")
 
 # Qt's generated registration code includes the wrapper headers by bare file name,
 # so every folder under wrapper/ has to be on the include path.

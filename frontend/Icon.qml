@@ -23,6 +23,9 @@ QtObject {
     readonly property string search:        "\uf002"   // magnifying-glass
     readonly property string keyboard:      "\uf11c"   // keyboard
     readonly property string settings:      "\uf013"   // gear
+    readonly property string palette:       "\uf53f"   // palette: settings, appearance
+    readonly property string pen:           "\uf304"   // pen: settings, editor
+    readonly property string info:          "\uf05a"   // circle-info: settings, about
 
     // ---- tabs and dialogs ----
     readonly property string close:         "\uf00d"   // xmark

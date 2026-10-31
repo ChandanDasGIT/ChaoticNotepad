@@ -19,6 +19,8 @@ class SettingsController : public QObject {
     Q_PROPERTY(bool useTabs READ useTabs NOTIFY changed)
     Q_PROPERTY(bool autoCloseBrackets READ autoCloseBrackets NOTIFY changed)
     Q_PROPERTY(bool showMinimap READ showMinimap NOTIFY changed)
+    Q_PROPERTY(bool hidePointerWhileTyping READ hidePointerWhileTyping NOTIFY changed)
+    Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)     // the About section
 
 public:
     explicit SettingsController(QObject* parent = nullptr);
@@ -30,6 +32,8 @@ public:
     bool useTabs() const { return m_useTabs; }
     bool autoCloseBrackets() const { return m_autoClose; }
     bool showMinimap() const;                       // lives in the engine: Alt+M changes it too
+    bool hidePointerWhileTyping() const { return m_hidePointer; }
+    QString qtVersion() const { return QString::fromLatin1(qVersion()); }
 
     Q_INVOKABLE void setDarkTheme(bool on);
     Q_INVOKABLE void setFontFamily(const QString& name);
@@ -38,6 +42,7 @@ public:
     Q_INVOKABLE void setUseTabs(bool on);
     Q_INVOKABLE void setAutoCloseBrackets(bool on);
     Q_INVOKABLE void setShowMinimap(bool on);
+    Q_INVOKABLE void setHidePointerWhileTyping(bool on);
 
 signals:
     void changed();
@@ -54,5 +59,6 @@ private:
     int m_indentWidth = 4;
     bool m_useTabs = false;
     bool m_autoClose = true;
+    bool m_hidePointer = true;
     bool m_lastMinimap = true;
 };
