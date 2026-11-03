@@ -6,6 +6,7 @@ Item {
 
     property string icon: ""        // a glyph from Icon.qml, e.g. Icon.save
     property string label: ""
+    property bool active: false     // true when the button represents an active/toggled state
     signal clicked()
 
     implicitWidth: content.implicitWidth + 2 * Theme.toolbarButtonPadding
@@ -13,8 +14,10 @@ Item {
 
     readonly property bool hovered: mouse.containsMouse && root.enabled
     readonly property color iconColor: !root.enabled ? Theme.textDisabled
+                                                     : root.active ? Theme.accent
                                                      : hovered ? Theme.text : Theme.iconDefault
-    readonly property color labelColor: !root.enabled ? Theme.textDisabled : Theme.text
+    readonly property color labelColor: !root.enabled ? Theme.textDisabled
+                                                      : root.active ? Theme.accent : Theme.text
 
     Rectangle {                      // the hover background
         anchors.fill: parent

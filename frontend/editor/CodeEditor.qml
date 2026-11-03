@@ -33,7 +33,7 @@ import QtQuick.Controls.Basic
 //
 //   Methods (Q_INVOKABLE) called by the editor:
 //     viewportChanged(columns, visibleRows, firstRow)    the width in cells, the height in rows, the top row
-//     mousePress(row, cell, button, modifiers, clicks)   button: Qt.LeftButton ...; clicks: 1, 2 or 3
+//     mousePress(row, cell, button, modifiers, x, y)    button: Qt.LeftButton ...; x, y: optional mouse coordinates
 //     mouseDrag(row, cell)
 //     mouseRelease()
 //     toggleFold(row)                                    (called by the gutter)
@@ -197,10 +197,6 @@ Item {
             property bool dragging: false
             property bool hiddenPosKnown: false
             property point hiddenPos
-            property int clicks: 0
-            property double lastPressTime: 0
-            property real lastPressX: 0
-            property real lastPressY: 0
 
             // function rowAt(y) {   //old code
             //     return Math.max(0, Math.min(list.count - 1, Math.floor((y + list.contentY) / root.rowHeight)))
@@ -229,19 +225,8 @@ Item {
                     return
                 }
 
-                // single, double and triple click
-                const now = Date.now()
-                const near = Math.abs(m.x - lastPressX) < 4 && Math.abs(m.y - lastPressY) < 4
-                if (now - lastPressTime < Application.styleHints.mouseDoubleClickInterval && near)
-                    clicks = clicks >= 3 ? 1 : clicks + 1
-                else
-                    clicks = 1
-                lastPressTime = now
-                lastPressX = m.x
-                lastPressY = m.y
-
                 dragging = m.button === Qt.LeftButton
-                EditorController.mousePress(rowAt(m.y), cellAt(m.x), m.button, m.modifiers, clicks)
+                EditorController.mousePress(rowAt(m.y), cellAt(m.x), m.button, m.modifiers, m.x, m.y)
             }
             onPositionChanged: (m) => {
                 if (root.pointerHidden) {                        // Qt also reports a still pointer when the text changes: only a new place counts

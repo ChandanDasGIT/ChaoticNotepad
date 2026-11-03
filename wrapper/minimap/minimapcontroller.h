@@ -55,6 +55,7 @@ private:
 
     void schedule();       // several changes in a row are worked out once
     void update();
+    void updatePalette();
     void scrollToLine(size_t line);
 
     Minimap m_map;

@@ -14,6 +14,7 @@
 #include "shsyntax.h"
 #include "cmakesyntax.h"
 #include "luasyntax.h"
+#include "markdownsyntax.h"
 
 class SyntaxHighlighter {
 public:

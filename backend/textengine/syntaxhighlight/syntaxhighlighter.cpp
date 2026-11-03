@@ -139,6 +139,51 @@ SyntaxHighlighter::State SyntaxHighlighter::scanLine(const std::string& s, State
     auto mark = [&](size_t from, size_t to, Token t) {
         for (size_t k = from; k < to && k < n; ++k) out[k] = t;
     };
+    if (L.name == "Markdown") {
+        const size_t first = s.find_first_not_of(" \t");
+        size_t run = 0;
+        if (first != npos && (s[first] == '`' || s[first] == '~'))
+            while (first + run < n && s[first + run] == s[first]) ++run;
+        if (st.kind == State::InString) {
+            mark(0, n, Token::String);
+            if (first != npos && s[first] == st.quote && run >= static_cast<size_t>(st.hashes)
+                    && s.find_first_not_of(" \t", first + run) == npos)
+                st = State{};
+            return st;
+        }
+        if (run >= 3) {
+            st.kind = State::InString;
+            st.quote = s[first];
+            st.hashes = static_cast<int>(run);
+            mark(0, n, Token::String);
+            return st;
+        }
+        if (first != npos && s[first] == '#') {
+            size_t end = first;
+            while (end < n && s[end] == '#') ++end;
+            if (end - first <= 6 && (end == n || s[end] == ' ' || s[end] == '\t')) {
+                mark(first, n, Token::Preprocessor);
+                return st;
+            }
+        }
+        if (first != npos && s[first] == '>') {
+            mark(first, n, Token::Comment);
+            return st;
+        }
+        for (size_t i = 0; i < n; ++i) {
+            if (s[i] == '\\') { ++i; continue; }
+            if (s[i] != '`' && s[i] != '*' && s[i] != '_' && s[i] != '~') continue;
+            size_t count = 1;
+            while (i + count < n && s[i + count] == s[i]) ++count;
+            const auto marker = s.substr(i, count);
+            const auto close = s.find(marker, i + count);
+            if (close != npos) {
+                mark(i, close + count, s[i] == '`' ? Token::String : Token::Keyword);
+                i = close + count - 1;
+            } else i += count - 1;
+        }
+        return st;
+    }
     auto isIdent = [&](char c) {
         return isAlnum(c) || c == '_' || static_cast<unsigned char>(c) >= 0x80 || L.identExtra.find(c) != npos;
     };

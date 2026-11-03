@@ -104,7 +104,7 @@ Editing
 - Word and line movement and selection with the keyboard.
 
 Code features
-- Syntax highlighting for C/C++, JavaScript, Rust, QML, Lua, Fish, shell scripts and CMake.
+- Syntax highlighting for C/C++, JavaScript, Rust, QML, Lua, Fish, shell scripts, CMake and Markdown.
 - Code folding, by brackets or by indentation (for example Python), with fold and unfold all.
 - Sticky scrolling: the headers of the blocks you are inside stay pinned at the top.
 - Line-number gutter that marks changed lines: red for unsaved changes, green for changes already saved, no mark for untouched lines.
@@ -116,6 +116,11 @@ Search
 - Replace and Replace all. In regex mode the replacement can use captured groups ($1, \1).
 - Select all matches at once.
 - App shortcuts such as save and switching tabs keep working while you type in the find bar.
+
+Markdown
+- Open `.md` or `.markdown` files with syntax highlighting and a live preview.
+- Use the Preview toolbar button or `Ctrl+Shift+V` for full preview; press `Esc` to return. Use Split or `Ctrl+Alt+V` for side-by-side editing. Both shortcuts can be changed in Settings.
+- Renders headings, emphasis, links, images, lists, blockquotes and code blocks using Qt rich text, with dark and light themes. Relative images resolve from the document folder. The preview supports basic Markdown; browser CSS, tables and raw HTML are not supported.
 
 Files and tabs
 - Tabs with an unsaved marker, drag-and-drop reordering, reopen of the last closed tab, and keyboard switching.

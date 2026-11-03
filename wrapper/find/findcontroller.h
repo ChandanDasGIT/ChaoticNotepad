@@ -51,6 +51,7 @@ public:
     Q_INVOKABLE void toggleWord();
     Q_INVOKABLE void toggleRegex();
     Q_INVOKABLE void toggleSelection();
+    Q_INVOKABLE bool handleFieldKey(int key, const QString& text, int modifiers);
 
 signals:
     void openChanged();

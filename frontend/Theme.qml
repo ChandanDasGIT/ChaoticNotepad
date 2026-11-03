@@ -110,7 +110,6 @@ QtObject {
     function syntaxColor(kind) {
         return kind >= 0 && kind < syntaxColors.length ? syntaxColors[kind] : text
     }
-    function syntaxBold(kind) { return kind === 1 || kind === 14 }   // keywords and modifiers
 
     // ---- fonts ----
     property string editorFontFamily: "Noto Sans Mono"

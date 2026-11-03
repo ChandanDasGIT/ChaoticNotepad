@@ -10,6 +10,12 @@ enum class Token : unsigned char {
     Modifier      // Rust pub
 };
 
+constexpr size_t kTokenCount = static_cast<size_t>(Token::Modifier) + 1;
+
+inline bool isBoldToken(Token t) {
+    return t == Token::Keyword || t == Token::Modifier;
+}
+
 // Everything the scanner needs to know about one language.
 struct LanguageDef {
     std::string name;

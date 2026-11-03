@@ -1,11 +1,14 @@
 #include "wrapper/editor/editorcontroller.h"
 #include <algorithm>
 #include <QClipboard>
+#include <QDateTime>
 #include <QGuiApplication>
 #include <QJSEngine>
 #include <QQmlEngine>
+#include <QStyleHints>
 #include <QVariantMap>
 #include "wrapper/dialog/dialogcontroller.h"
+#include "wrapper/markdown/markdowncontroller.h"
 #include "wrapper/shortcuts/shortcutscontroller.h"
 
 namespace {
@@ -348,6 +351,19 @@ bool EditorController::keyPressed(int key, const QString& text, int modifiers) {
     }
 
     if (command) {
+        // ---- Ctrl+Shift+V: toggle full Markdown preview ----
+        if (key == Qt::Key_V && (modifiers & Qt::ControlModifier) && (modifiers & Qt::ShiftModifier)
+                && !(modifiers & Qt::AltModifier)) {
+            MarkdownController::instance()->toggleFullPreview();
+            return true;
+        }
+
+        if (key == Qt::Key_V && (modifiers & Qt::ControlModifier)
+                && (modifiers & Qt::AltModifier) && !(modifiers & Qt::ShiftModifier)) {
+            MarkdownController::instance()->toggleSplitPreview();
+            return true;
+        }
+
         feed(Input::Event::makeKey(k), true);
         return true;
     }
@@ -362,8 +378,32 @@ bool EditorController::keyPressed(int key, const QString& text, int modifiers) {
 
 // ------------------------------------------------------------------ mouse
 
-void EditorController::mousePress(int row, int cell, int button, int modifiers, int clicks) {
+void EditorController::mousePress(int row, int cell, int button, int modifiers, int x, int y) {
     if (row < 0 || static_cast<size_t>(row) >= m_builder.rowCount()) return;
+
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    int interval = QGuiApplication::styleHints() ? QGuiApplication::styleHints()->mouseDoubleClickInterval() : 400;
+    int maxDist = QGuiApplication::styleHints() ? QGuiApplication::styleHints()->mouseDoubleClickDistance() : 5;
+
+    bool near = false;
+    if (x >= 0 && y >= 0 && m_lastPressPos.x() >= 0 && m_lastPressPos.y() >= 0) {
+        near = (std::abs(x - m_lastPressPos.x()) <= maxDist &&
+                std::abs(y - m_lastPressPos.y()) <= maxDist);
+    } else {
+        near = (row == m_lastRow && std::abs(cell - m_lastCell) <= 1);
+    }
+
+    if (button == Qt::LeftButton && (now - m_lastPressTime < interval) && near) {
+        m_clicks = (m_clicks >= 3) ? 1 : (m_clicks + 1);
+    } else {
+        m_clicks = 1;
+    }
+
+    m_lastPressTime = now;
+    m_lastPressPos = QPoint(x, y);
+    m_lastRow = row;
+    m_lastCell = cell;
+
     Input::MouseEvent m;
     m.kind = Input::MouseEvent::Kind::Press;
     m.button = button == Qt::RightButton ? Input::Button::Right
@@ -371,7 +411,7 @@ void EditorController::mousePress(int row, int cell, int button, int modifiers, 
     m.mods = toMods(modifiers);
     m.region = Input::Region::Text;
     m.pos = m_builder.positionAt(m_tabs.current(), static_cast<size_t>(row), static_cast<size_t>(std::max(cell, 0)));
-    m.clicks = clicks;
+    m.clicks = m_clicks;
     feed(Input::Event::makeMouse(m), false);
 }
 

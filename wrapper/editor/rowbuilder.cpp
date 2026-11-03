@@ -141,16 +141,18 @@ std::vector<RowSpan> RowBuilder::spansFor(const EditorTab& tab, size_t line, siz
         size_t len = 1;
         char32_t cp = decodeAt(s, c, len);
         size_t w = charCells(cp, cell);
-        int kind = static_cast<int>(tab.syntax.tokenAt(line, c));
+        Token tok = tab.syntax.tokenAt(line, c);
+        int kind = static_cast<int>(tok);
         CharStyle st = tab.view.styleAt(line, c);
+        bool bold = st.bold || isBoldToken(tok);
 
-        bool same = open && cur.kind == kind && cur.bold == st.bold && cur.italic == st.italic && cur.underline == st.underline;
+        bool same = open && cur.kind == kind && cur.bold == bold && cur.italic == st.italic && cur.underline == st.underline;
         if (!same && !(open && w == 0)) {                                    // a combining mark stays with its letter
             flush();
             cur = RowSpan();
             cur.start = static_cast<int>(cell);
             cur.kind = kind;
-            cur.bold = st.bold;
+            cur.bold = bold;
             cur.italic = st.italic;
             cur.underline = st.underline;
             open = true;

@@ -1,4 +1,5 @@
 #include "wrapper/find/findcontroller.h"
+#include <QSet>
 #include "textengine/findpanel/findpanel.h"
 #include "wrapper/editor/editorcontroller.h"
 
@@ -258,4 +259,20 @@ void FindController::toggleSelection() {
     search();
     if (st.findInSel && !ed->tab().view.findScoped()) st.status = "select text before opening find to search inside it";
     finish(true);
+}
+
+bool FindController::handleFieldKey(int key, const QString& text, int modifiers) {
+    const bool alt = (modifiers & Qt::AltModifier) != 0;
+    const bool ctrl = (modifiers & Qt::ControlModifier) != 0;
+
+    static const QSet<int> textEditKeys = {
+        Qt::Key_A, Qt::Key_C, Qt::Key_V, Qt::Key_X, Qt::Key_Z, Qt::Key_Y,
+        Qt::Key_Insert, Qt::Key_Left, Qt::Key_Right, Qt::Key_Home, Qt::Key_End,
+        Qt::Key_Backspace, Qt::Key_Delete
+    };
+
+    if (alt || (ctrl && !textEditKeys.contains(key))) {
+        return EditorController::instance()->keyPressed(key, text, modifiers);
+    }
+    return false;
 }

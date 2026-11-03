@@ -15,6 +15,13 @@ ApplicationWindow {
     // Closing the window (the X, Super+C ...) asks about unsaved tabs first
     onClosing: (close) => { close.accepted = DialogController.closeRequested() }
 
+    Connections {
+        target: MarkdownController
+        function onStateChanged() {
+            if (!MarkdownController.previewOpen) editor.forceActiveFocus()
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -31,13 +38,15 @@ ApplicationWindow {
             onTabMoveRequested: (from, to) => TabsController.moveTab(from, to)
         }
 
-        // ---- gutter | text area | minimap ----
+        // ---- gutter | text area | minimap | markdown preview ----
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 0
 
+            // Hidden when full-preview is open (Ctrl+Shift+V)
             Gutter {
+                visible: !MarkdownController.previewOpen
                 Layout.fillHeight: true
                 Layout.preferredWidth: implicitWidth
                 contentY: editor.contentY
@@ -46,14 +55,27 @@ ApplicationWindow {
             }
             CodeEditor {
                 id: editor
+                visible: !MarkdownController.previewOpen
                 Layout.fillWidth: true
+                Layout.preferredWidth: MarkdownController.splitOpen ? parent.width / 2 : -1
                 Layout.fillHeight: true
                 focus: true
             }
             Minimap {
+                visible: !MarkdownController.previewOpen
                 Layout.fillHeight: true
                 Layout.preferredWidth: Theme.minimapWidth
                 onScrolled: (dy) => editor.scrollBy(dy)
+            }
+
+            // Shared Markdown preview for both modes:
+            //   previewOpen = full-width toggle (Ctrl+Shift+V)
+            //   splitOpen   = side-by-side split (Ctrl+Alt+V)
+            MarkdownPreview {
+                visible: MarkdownController.previewOpen || MarkdownController.splitOpen
+                Layout.fillWidth: true
+                Layout.preferredWidth: MarkdownController.splitOpen ? parent.width / 2 : -1
+                Layout.fillHeight: true
             }
         }
 
@@ -97,6 +119,8 @@ ApplicationWindow {
             onShortcutsClicked: settingsDialog.open("shortcuts")
             onSettingsClicked: settingsDialog.open()
             onUpdateClicked: settingsDialog.open("about")
+            onPreviewClicked: MarkdownController.toggleFullPreview()
+            onSplitClicked: MarkdownController.toggleSplitPreview()
         }
     }
 

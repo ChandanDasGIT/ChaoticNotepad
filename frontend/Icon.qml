@@ -50,4 +50,9 @@ QtObject {
     readonly property string file:          "\uf15b"   // file
     readonly property string copy:          "\uf0c5"   // copy
     readonly property string trash:         "\uf1f8"   // trash
+
+    // ---- markdown preview ----
+    readonly property string eye:           "\uf06e"   // eye (show preview)
+    readonly property string eyeSlash:      "\uf070"   // eye-slash (hide preview)
+    readonly property string columns:       "\uf0db"   // table-columns (split view)
 }

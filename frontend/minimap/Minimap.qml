@@ -14,7 +14,6 @@ import QtQuick
 //   marks                      a list of { row, edit, find } for the rows that have something to show:
 //                              edit 0 none, 1 unsaved, 2 saved;  find 0 none, 1 selection, 2 cursor, 3 match, 4 current match
 //   setSize(columns, rows)     tells the wrapper how many minimap pixels fit
-//   setPalette(colors)         the colour of each syntax token number, as a list
 //   pressed(row), dragged(row), released()   the mouse, in minimap pixel rows
 Item {
     id: root
@@ -85,27 +84,13 @@ Item {
         }
     }
 
-    // ---- tell the wrapper how much room there is, and the syntax colours ----
+    // ---- tell the wrapper how much room there is ----
     function report() {
         MinimapController.setSize(Math.floor(root.pictureWidth / root.pixel), Math.floor(root.height / root.pixel))
     }
     onPictureWidthChanged: Qt.callLater(report)
     onHeightChanged: Qt.callLater(report)
-
-    function sendPalette() {
-        const colors = []
-        for (let kind = 0; kind <= 14; ++kind)
-            colors.push(Theme.syntaxColor(kind))
-        MinimapController.setPalette(colors)
-    }
-    Component.onCompleted: {
-        sendPalette()
-        Qt.callLater(report)
-    }
-    Connections {                             // dark / light changed: send the new syntax colours
-        target: Theme
-        function onIsDarkChanged() { root.sendPalette() }
-    }
+    Component.onCompleted: Qt.callLater(report)
 
     // ---- mouse ----
     function rowAt(y) {

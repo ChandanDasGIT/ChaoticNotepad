@@ -1,5 +1,7 @@
 #include "wrapper/settings/settingscontroller.h"
 #include <algorithm>
+#include <QJSEngine>
+#include <QQmlEngine>
 #include <QSettings>
 #include <QTimer>
 #include "wrapper/editor/editorcontroller.h"
@@ -9,6 +11,17 @@ QSettings& file() {
     static QSettings s(QStringLiteral("ChaoticNotepad"), QStringLiteral("ChaoticNotepad"));
     return s;
 }
+}
+
+SettingsController* SettingsController::instance() {
+    static SettingsController* inst = new SettingsController();
+    return inst;
+}
+
+SettingsController* SettingsController::create(QQmlEngine*, QJSEngine*) {
+    SettingsController* inst = instance();
+    QJSEngine::setObjectOwnership(inst, QJSEngine::CppOwnership);
+    return inst;
 }
 
 SettingsController::SettingsController(QObject* parent) : QObject(parent) {

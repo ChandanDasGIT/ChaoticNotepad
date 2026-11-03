@@ -3,6 +3,9 @@
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 
+class QQmlEngine;
+class QJSEngine;
+
 // What SettingsDialog.qml talks to (SettingsController in QML). The choices are remembered between runs
 // (QSettings) and applied to the engine: bracket closing for every tab, indentation for the tabs whose file shows
 // none of its own (changing the setting applies it to all of them), the minimap switch.
@@ -23,6 +26,9 @@ class SettingsController : public QObject {
     Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)     // the About section
 
 public:
+    static SettingsController* instance();
+    static SettingsController* create(QQmlEngine*, QJSEngine*);
+
     explicit SettingsController(QObject* parent = nullptr);
 
     bool darkTheme() const { return m_dark; }

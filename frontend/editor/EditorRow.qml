@@ -89,7 +89,7 @@ Item {
             color: Theme.syntaxColor(modelData.kind)
             font.family: Theme.editorFontFamily
             font.pixelSize: Theme.editorFontSize
-            font.bold: modelData.bold || Theme.syntaxBold(modelData.kind)
+            font.bold: modelData.bold
             font.italic: modelData.italic
             font.underline: modelData.underline
         }

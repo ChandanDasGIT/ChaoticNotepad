@@ -111,7 +111,9 @@ ShortcutsController::ShortcutsController(QObject* parent) : QObject(parent) {
     add(folding, "unfoldAll", "Unfold all blocks",              Qt::Key_BracketRight, C | A | S);
 
     const QString view = QStringLiteral("View");
-    add(view, "minimap", "Show or hide the minimap", Qt::Key_M, A);
+    add(view, "minimap",              "Show or hide the minimap",              Qt::Key_M, A);
+    add(view, "markdownTogglePreview","Markdown: toggle full preview",          Qt::Key_V, C | S);
+    add(view, "markdownSplitPreview", "Markdown: side-by-side preview", Qt::Key_V, C | A);
 
     const QString find = QStringLiteral("Find and replace");
     add(find, "find",    "Find",                 Qt::Key_F, C);

@@ -113,3 +113,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ChaoticNotepad.svg")
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
     )
 endif()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(markdown_test tests/markdown_test.cpp)
+    target_link_libraries(markdown_test PRIVATE textengine)
+    add_test(NAME markdown COMMAND markdown_test)
+endif()

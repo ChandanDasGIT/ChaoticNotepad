@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QPoint>
 #include <QString>
 #include <QStringList>
 #include <QUrl>
@@ -66,7 +67,7 @@ public:
     // ---- called by the text area ----
     Q_INVOKABLE void viewportChanged(int columns, int visibleRows, int firstRow);
     Q_INVOKABLE bool keyPressed(int key, const QString& text, int modifiers);   // true = the engine used the key
-    Q_INVOKABLE void mousePress(int row, int cell, int button, int modifiers, int clicks);
+    Q_INVOKABLE void mousePress(int row, int cell, int button, int modifiers, int x = -1, int y = -1);
     Q_INVOKABLE void mouseDrag(int row, int cell);
     Q_INVOKABLE void mouseRelease();
     Q_INVOKABLE void stickyClicked(int index);     // index of the pinned line, 0 = the first (also called by GutterController)
@@ -118,4 +119,11 @@ private:
     QVariantList m_sticky;
     QString m_status;
     bool m_quitArmed = false;
+
+    qint64 m_lastPressTime = 0;
+    QPoint m_lastPressPos{-100, -100};
+    int m_lastRow = -1;
+    int m_lastCell = -1;
+    int m_clicks = 0;
+
 };

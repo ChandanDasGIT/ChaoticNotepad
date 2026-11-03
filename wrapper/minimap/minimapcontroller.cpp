@@ -4,9 +4,48 @@
 #include <QTimer>
 #include <QVariantMap>
 #include "wrapper/editor/editorcontroller.h"
+#include "wrapper/settings/settingscontroller.h"
 
 namespace {
 const size_t kMinimapChars = 120;   // how many characters of a line the picture covers
+
+// Syntax token colors (matching Token enum: None, Keyword, Type, Function, Number, String,
+// Comment, Preprocessor, Constant, Variable, Property, Attribute, Class, Identifier, Modifier)
+const std::vector<QRgb> kDarkPalette = {
+    qRgb(171, 178, 191), // #abb2bf None
+    qRgb(198, 120, 221), // #c678dd Keyword
+    qRgb(97, 175, 239),  // #61afef Type
+    qRgb(97, 175, 239),  // #61afef Function
+    qRgb(152, 195, 121), // #98c379 Number
+    qRgb(152, 195, 121), // #98c379 String
+    qRgb(92, 99, 112),   // #5c6370 Comment
+    qRgb(229, 192, 123), // #e5c07b Preprocessor
+    qRgb(209, 154, 102), // #d19a66 Constant
+    qRgb(224, 108, 117), // #e06c75 Variable
+    qRgb(224, 108, 117), // #e06c75 Property
+    qRgb(209, 154, 102), // #d19a66 Attribute
+    qRgb(229, 192, 123), // #e5c07b Class
+    qRgb(209, 154, 102), // #d19a66 Identifier
+    qRgb(198, 120, 221)  // #c678dd Modifier
+};
+
+const std::vector<QRgb> kLightPalette = {
+    qRgb(56, 58, 66),    // #383a42 None
+    qRgb(166, 38, 164),  // #a626a4 Keyword
+    qRgb(193, 132, 1),   // #c18401 Type
+    qRgb(64, 120, 242),  // #4078f2 Function
+    qRgb(152, 104, 1),   // #986801 Number
+    qRgb(80, 161, 79),   // #50a14f String
+    qRgb(160, 161, 167), // #a0a1a7 Comment
+    qRgb(193, 132, 1),   // #c18401 Preprocessor
+    qRgb(152, 104, 1),   // #986801 Constant
+    qRgb(228, 86, 73),   // #e45649 Variable
+    qRgb(228, 86, 73),   // #e45649 Property
+    qRgb(152, 104, 1),   // #986801 Attribute
+    qRgb(193, 132, 1),   // #c18401 Class
+    qRgb(152, 104, 1),   // #986801 Identifier
+    qRgb(166, 38, 164)   // #a626a4 Modifier
+};
 }
 
 MinimapController* MinimapController::instance() {
@@ -23,11 +62,12 @@ MinimapController* MinimapController::create(QQmlEngine*, QJSEngine*) {
 MinimapController::MinimapController(QObject* parent) : QObject(parent) {
     static int count = 0;
     if (++count > 1) qWarning("MinimapController was created twice: QML and the wrappers are using different objects"); 
-    m_palette.assign(15, qRgb(200, 200, 200));
+    updatePalette();
     EditorController* ed = EditorController::instance();
     connect(ed, &EditorController::rowsRebuilt, this, &MinimapController::schedule);
     connect(ed, &EditorController::viewChanged, this, &MinimapController::schedule);
     connect(ed, &EditorController::documentChanged, this, &MinimapController::schedule);
+    connect(SettingsController::instance(), &SettingsController::changed, this, &MinimapController::updatePalette);
 }
 
 void MinimapController::setSize(int columns, int rows) {
@@ -46,6 +86,16 @@ void MinimapController::setPalette(const QVariantList& colors) {
     m_palette = palette;
     ++m_paletteVersion;
     schedule();
+}
+
+void MinimapController::updatePalette() {
+    bool dark = SettingsController::instance()->darkTheme();
+    const auto& next = dark ? kDarkPalette : kLightPalette;
+    if (m_palette != next) {
+        m_palette = next;
+        ++m_paletteVersion;
+        schedule();
+    }
 }
 
 void MinimapController::schedule() {

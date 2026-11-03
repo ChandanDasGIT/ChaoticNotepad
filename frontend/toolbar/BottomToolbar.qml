@@ -18,6 +18,8 @@ Rectangle {
     signal shortcutsClicked()
     signal settingsClicked()
     signal updateClicked()
+    signal previewClicked()
+    signal splitClicked()
 
     implicitHeight: Theme.bottomBarHeight
     color: Theme.bottomBarBg
@@ -62,5 +64,21 @@ Rectangle {
         ToolbarButton { icon: Icon.search;   label: "Find";     onClicked: root.findClicked() }
         ToolbarButton { icon: Icon.keyboard; label: "Shortcuts"; onClicked: root.shortcutsClicked() }
         ToolbarButton { icon: Icon.settings; label: "Settings"; onClicked: root.settingsClicked() }
+
+        // ---- Markdown preview buttons: only visible when a .md file is active ----
+        ToolbarButton {
+            visible: MarkdownController.isMarkdown
+            icon: Icon.eye
+            label: "Preview"
+            active: MarkdownController.previewOpen
+            onClicked: root.previewClicked()
+        }
+        ToolbarButton {
+            visible: MarkdownController.isMarkdown
+            icon: Icon.columns
+            label: "Split"
+            active: MarkdownController.splitOpen
+            onClicked: root.splitClicked()
+        }
     }
 }
