@@ -78,7 +78,7 @@ QtObject {
     readonly property color findMatchBg:       isDark ? "#40e5c07b" : "#40c18401"
     readonly property color findCurrentBg:     isDark ? "#80e5c07b" : "#80c18401"
     readonly property color bracketBg:         isDark ? "#33528bff" : "#334078f2"
-    readonly property color bracketBorder:     isDark ? "#528bff" : "#4078f2"
+    readonly property color bracketBorder:     isDark ? "#ffd60a" : "#00a86b"
     readonly property color gutterText:        isDark ? "#5b626f" : "#9d9d9f"
     readonly property color gutterTextActive:  isDark ? "#abb2bf" : "#383a42"
     readonly property color danger:            isDark ? "#c93c3c" : "#c0392b"   // destructive buttons
