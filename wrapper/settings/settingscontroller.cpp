@@ -5,6 +5,7 @@
 #include <QSettings>
 #include <QTimer>
 #include "wrapper/editor/editorcontroller.h"
+#include "wrapper/session/session.h"
 
 namespace {
 QSettings& file() {
@@ -33,6 +34,7 @@ SettingsController::SettingsController(QObject* parent) : QObject(parent) {
     m_useTabs = s.value("useTabs", m_useTabs).toBool();
     m_autoClose = s.value("autoCloseBrackets", m_autoClose).toBool();
     m_hidePointer = s.value("hidePointerWhileTyping", m_hidePointer).toBool();
+    m_restoreSession = s.value("restoreSession", m_restoreSession).toBool();
 
     EditorController* ed = EditorController::instance();
     ed->inputState().minimapOn = s.value("showMinimap", true).toBool();
@@ -59,6 +61,7 @@ void SettingsController::store() {
     s.setValue("useTabs", m_useTabs);
     s.setValue("autoCloseBrackets", m_autoClose);
     s.setValue("hidePointerWhileTyping", m_hidePointer);
+    s.setValue("restoreSession", m_restoreSession);
     s.setValue("showMinimap", showMinimap());
     s.sync();
 }
@@ -144,6 +147,14 @@ void SettingsController::setAutoCloseBrackets(bool on) {
 void SettingsController::setHidePointerWhileTyping(bool on) {
     if (on == m_hidePointer) return;
     m_hidePointer = on;
+    store();
+    emit changed();
+}
+
+void SettingsController::setRestoreSession(bool on) {
+    if (on == m_restoreSession) return;
+    m_restoreSession = on;
+    if (!on) Session::clear();
     store();
     emit changed();
 }

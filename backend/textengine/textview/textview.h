@@ -123,6 +123,11 @@ public:
     std::string text() const;
     const TextBuffer& buffer() const;
     void loadText(const std::string& s);   // replaces everything (used when a file is opened)
+    // The same with formatting: one CharStyle per byte of s that is not a line break (as TextStyle keeps them).
+    void loadText(const std::string& s, const std::vector<CharStyle>& styles);
+    // Replaces everything as one undo step (bringing back a tab's unsaved text). Empty styles: plain text.
+    void replaceAllText(const std::string& s, const std::vector<CharStyle>& styles);
+    std::vector<CharStyle> allStyles() const;   // the formatting of the whole text, laid out as for loadText
 
     // ---- change detection ----
     // A number that differs whenever anything a screen draws has changed: the text, cursors and selections, formatting,

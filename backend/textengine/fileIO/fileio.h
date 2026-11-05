@@ -37,6 +37,8 @@ void setMaxFileBytes(size_t bytes);
 
 // Reads a whole file. Returns false (and sets error) for missing, unreadable, folder, binary or too big files.
 bool readFile(const std::string& path, std::string& text, std::string& error);
+// The same, for files that are not text (a .docx): binary content is fine.
+bool readBytes(const std::string& path, std::string& data, std::string& error);
 
 // Writes text to a temporary file and renames it over the target.
 bool writeFile(const std::string& path, const std::string& text, std::string& error);

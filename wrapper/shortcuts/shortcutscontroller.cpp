@@ -90,6 +90,11 @@ ShortcutsController::ShortcutsController(QObject* parent) : QObject(parent) {
     addFixed(editing, "Indent", "Tab");
     addFixed(editing, "Outdent", "Shift+Tab");
 
+    const QString formatting = QStringLiteral("Formatting (saved in .docx files)");
+    add(formatting, "bold",      "Bold",      Qt::Key_B, C);
+    add(formatting, "italic",    "Italic",    Qt::Key_I, C);
+    add(formatting, "underline", "Underline", Qt::Key_U, C);
+
     const QString moving = QStringLiteral("Moving and selecting");
     addFixed(moving, "Move by word", "Ctrl+Left / Ctrl+Right");
     addFixed(moving, "Start / end of the line", "Home / End");

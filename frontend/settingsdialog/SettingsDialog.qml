@@ -12,9 +12,10 @@ import QtQuick.Layouts
 // It also applies the choices to the Theme (font and dark mode), so Main.qml needs nothing else.
 //
 // What it needs from SettingsController:
-//   darkTheme, fontFamily, fontSize, indentWidth, useTabs, autoCloseBrackets, showMinimap, hidePointerWhileTyping
+//   darkTheme, fontFamily, fontSize, indentWidth, useTabs, autoCloseBrackets, showMinimap, hidePointerWhileTyping,
+//   restoreSession
 //   setDarkTheme(on), setFontFamily(name), setFontSize(n), setIndentWidth(n), setUseTabs(on),
-//   setAutoCloseBrackets(on), setShowMinimap(on), setHidePointerWhileTyping(on)
+//   setAutoCloseBrackets(on), setShowMinimap(on), setHidePointerWhileTyping(on), setRestoreSession(on)
 //   qtVersion
 // and from UpdateController (the About page): available, latestVersion, status, busy, canInstall, readyToRestart,
 //   autoCheck, setAutoCheck(on), checkNow(), updateNow(), openReleasePage()
@@ -413,6 +414,16 @@ Item {
                     SettingsSwitch {
                         checked: SettingsController.hidePointerWhileTyping
                         onToggled: (on) => SettingsController.setHidePointerWhileTyping(on)
+                    }
+                }
+                SettingsRow {
+                    visible: root.page === "editor"
+                    Layout.fillWidth: true
+                    title: "Restore tabs on start"
+                    description: "Closing the app keeps every tab, unsaved changes and untitled tabs too, and the next start opens them again. Nothing asks you to save. Turning this off deletes the kept copy."
+                    SettingsSwitch {
+                        checked: SettingsController.restoreSession
+                        onToggled: (on) => SettingsController.setRestoreSession(on)
                     }
                 }
 

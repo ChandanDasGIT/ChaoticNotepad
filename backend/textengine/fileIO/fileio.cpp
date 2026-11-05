@@ -150,6 +150,12 @@ size_t maxFileBytes() { return g_maxFileBytes; }
 void setMaxFileBytes(size_t bytes) { g_maxFileBytes = bytes; }
 
 bool readFile(const std::string& path, std::string& text, std::string& error) {
+    if (!readBytes(path, text, error)) return false;
+    if (text.find('\0') != std::string::npos) { text.clear(); error = "it looks like a binary file"; return false; }
+    return true;
+}
+
+bool readBytes(const std::string& path, std::string& text, std::string& error) {
     std::error_code ec;
     fs::file_status st = fs::status(toPath(path), ec);
     if (ec || !fs::exists(st)) { error = ec ? ec.message() : "no such file"; return false; }
@@ -178,7 +184,6 @@ bool readFile(const std::string& path, std::string& text, std::string& error) {
         }
     }
     if (f.bad()) { error = "cannot read the file"; return false; }
-    if (text.find('\0') != std::string::npos) { error = "it looks like a binary file"; return false; }
     return true;
 }
 

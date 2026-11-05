@@ -70,6 +70,8 @@ If you used the AppImage, nothing was installed: just delete the file.
 
 Settings and changed shortcuts are saved in `~/.config/ChaoticNotepad/ChaoticNotepad.conf`.
 
+With **Restore tabs on start** switched on (Settings > Editor), the open tabs are kept in `~/.local/share/ChaoticNotepad/session`, unsaved text included, in a folder only you can read. Switching the setting off deletes it.
+
 ## Updates
 
 Once a day the app asks GitHub for the latest version. Nothing else is sent. When a new one is out, a green dot appears in the bottom bar, before Find. Click it to open **Settings > About**. To stop the daily check, turn off **Check for updates** there.
@@ -122,7 +124,12 @@ Markdown
 - Use the Preview toolbar button or `Ctrl+Shift+V` for full preview; press `Esc` to return. Use Split or `Ctrl+Alt+V` for side-by-side editing. Both shortcuts can be changed in Settings.
 - Renders headings, emphasis, links, images, lists, blockquotes and code blocks using Qt rich text, with dark and light themes. Relative images resolve from the document folder. The preview supports basic Markdown; browser CSS, tables and raw HTML are not supported.
 
+Word documents
+- Open and save `.docx` files with their text, bold, italic and underline. `Ctrl+B`, `Ctrl+I` and `Ctrl+U` toggle the formatting (changeable in Settings). Save As with a `.docx` name turns any text into a Word document.
+- Only that is kept: tables, pictures, headers, colours, fonts and the rest are dropped when such a file is saved here, and opening it says so.
+
 Files and tabs
+- Restore tabs on start (Settings > Editor): closing asks nothing and the next start brings back every tab, unsaved changes and untitled tabs too, with the same tab in front and the cursors where they were.
 - Tabs with an unsaved marker, drag-and-drop reordering, reopen of the last closed tab, and keyboard switching.
 - Open existing files from the command line: `ChaoticNotepad file1.txt file2.txt`
 - Drop files on the window to open them.

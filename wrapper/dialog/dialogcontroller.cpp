@@ -4,6 +4,7 @@
 #include <QJSEngine>
 #include <QQmlEngine>
 #include "wrapper/editor/editorcontroller.h"
+#include "wrapper/session/session.h"
 
 DialogController* DialogController::instance() {
     static DialogController* inst = new DialogController();
@@ -64,6 +65,7 @@ void DialogController::quitApp() {
 bool DialogController::closeRequested() {
     if (m_quitConfirmed) return true;
     if (m_quitting) return false;      // already asking: don't start again from the first tab
+    if (Session::saveForQuit()) { m_quitConfirmed = true; return true; }   // the tabs come back on the next start
     TabManager& tabs = EditorController::instance()->tabs();
     bool unsaved = false;
     for (size_t i = 0; i < tabs.count() && !unsaved; ++i)
@@ -142,6 +144,11 @@ void DialogController::requestClose(size_t index) {
 
 void DialogController::requestQuit(bool forUpdate) {
     if (m_quitting) return;
+    if (Session::saveForQuit()) {      // session restore: nothing to ask, the tabs come back on the next start
+        m_quitForUpdate = forUpdate;
+        quitApp();
+        return;
+    }
     m_quitting = true;
     m_quitForUpdate = forUpdate;
     m_quitSkipped.clear();

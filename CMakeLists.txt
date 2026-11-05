@@ -18,6 +18,9 @@ file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS
 
 add_library(textengine STATIC ${ENGINE_SOURCES})
 target_include_directories(textengine PUBLIC "${CMAKE_CURRENT_LIST_DIR}/backend")
+# zlib unpacks and packs Word documents (.docx are zip files). Every Linux system has it.
+find_package(ZLIB REQUIRED)
+target_link_libraries(textengine PRIVATE ZLIB::ZLIB)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(textengine PRIVATE -Wall -Wextra)
 endif()
@@ -119,4 +122,7 @@ if(BUILD_TESTING)
     add_executable(markdown_test tests/markdown_test.cpp)
     target_link_libraries(markdown_test PRIVATE textengine)
     add_test(NAME markdown COMMAND markdown_test)
+    add_executable(docx_test tests/docx_test.cpp)
+    target_link_libraries(docx_test PRIVATE textengine)
+    add_test(NAME docx COMMAND docx_test)
 endif()

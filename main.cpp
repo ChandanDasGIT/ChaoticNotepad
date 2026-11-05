@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QUrl>
 #include "wrapper/editor/editorcontroller.h"
+#include "wrapper/session/session.h"
 #include "wrapper/update/updatecontroller.h"
 
 int main(int argc, char *argv[])
@@ -23,6 +24,8 @@ int main(int argc, char *argv[])
     engine.loadFromModule("ChaoticNotepad", "Main");
     if (!engine.rootObjects().isEmpty())                                         // a crash this early still counts as not started
         QTimer::singleShot(2000, &app, [] { UpdateController::reportStarted(); });
+
+    Session::restore();                                                          // the last session's tabs, if that setting is on
 
     // files named on the command line open in tabs: appChaoticNotepad a.txt "my notes.md"
     QList<QUrl> urls;

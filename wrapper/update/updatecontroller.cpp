@@ -27,6 +27,7 @@
 #include "third_party/monocypher/monocypher-ed25519.h"
 #include "wrapper/dialog/dialogcontroller.h"
 #include "wrapper/editor/editorcontroller.h"
+#include "wrapper/session/session.h"
 
 // The test build replaces these three, to talk to a local server with a test key.
 #ifndef UPDATE_API_URL
@@ -526,8 +527,9 @@ void UpdateController::installOnQuit() {
 
     QStringList arguments = {scriptPath, m_stage, m_newCopy, m_installed, target, newProgram, m_program};
     TabManager& tabs = EditorController::instance()->tabs();       // the same files open again
-    for (size_t i = 0; i < tabs.count(); ++i)
-        if (!tabs.at(i).doc.path().empty()) arguments << QString::fromStdString(tabs.at(i).doc.path());
+    if (!Session::savedForQuit())                                  // (session restore brings back every tab by itself)
+        for (size_t i = 0; i < tabs.count(); ++i)
+            if (!tabs.at(i).doc.path().empty()) arguments << QString::fromStdString(tabs.at(i).doc.path());
 
     QProcess process;
     process.setProcessEnvironment(cleanEnvironment());

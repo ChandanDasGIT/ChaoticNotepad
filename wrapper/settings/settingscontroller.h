@@ -23,6 +23,7 @@ class SettingsController : public QObject {
     Q_PROPERTY(bool autoCloseBrackets READ autoCloseBrackets NOTIFY changed)
     Q_PROPERTY(bool showMinimap READ showMinimap NOTIFY changed)
     Q_PROPERTY(bool hidePointerWhileTyping READ hidePointerWhileTyping NOTIFY changed)
+    Q_PROPERTY(bool restoreSession READ restoreSession NOTIFY changed)
     Q_PROPERTY(QString qtVersion READ qtVersion CONSTANT)     // the About section
 
 public:
@@ -39,6 +40,7 @@ public:
     bool autoCloseBrackets() const { return m_autoClose; }
     bool showMinimap() const;                       // lives in the engine: Alt+M changes it too
     bool hidePointerWhileTyping() const { return m_hidePointer; }
+    bool restoreSession() const { return m_restoreSession; }
     QString qtVersion() const { return QString::fromLatin1(qVersion()); }
 
     Q_INVOKABLE void setDarkTheme(bool on);
@@ -49,6 +51,7 @@ public:
     Q_INVOKABLE void setAutoCloseBrackets(bool on);
     Q_INVOKABLE void setShowMinimap(bool on);
     Q_INVOKABLE void setHidePointerWhileTyping(bool on);
+    Q_INVOKABLE void setRestoreSession(bool on);   // off: the saved session is deleted (see Session)
 
 signals:
     void changed();
@@ -66,5 +69,6 @@ private:
     bool m_useTabs = false;
     bool m_autoClose = true;
     bool m_hidePointer = true;
+    bool m_restoreSession = false;
     bool m_lastMinimap = true;
 };

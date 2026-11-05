@@ -1367,7 +1367,24 @@ unsigned long long TextView::stateRevision() const {
 
 // ---------------------------------------------------------------- loading a file
 
-void TextView::loadText(const std::string& s) {
+void TextView::loadText(const std::string& s) { loadText(s, {}); }
+
+std::vector<CharStyle> TextView::allStyles() const { return m_style.slice(Position{}, m_buffer.endPosition()); }
+
+void TextView::replaceAllText(const std::string& s, const std::vector<CharStyle>& styles) {
+    m_typingStyle = CharStyle();
+    m_lastKind = EditKind::None;
+    std::vector<EditRange> edits;
+    edits.push_back({0, m_buffer.length(), withoutCR(s), styles, !styles.empty()});
+    applyEdits(edits, EditKind::Other);
+    m_lastKind = EditKind::None;
+    m_cursors.assign(1, Cursor{});
+    m_main = 0;
+    ++m_styleStamp;
+    syncTypingStyle();
+}
+
+void TextView::loadText(const std::string& s, const std::vector<CharStyle>& styles) {
     m_buffer = TextBuffer();
     m_folding.reset();
     m_style = TextStyle();
@@ -1382,9 +1399,10 @@ void TextView::loadText(const std::string& s) {
     std::string clean = withoutCR(s);
     if (!clean.empty()) {
         std::vector<EditRange> edits;
-        edits.push_back({0, 0, clean, {}, false});
+        edits.push_back({0, 0, clean, styles, !styles.empty()});
         applyEdits(edits, EditKind::Other);
     }
+    if (!styles.empty()) ++m_styleStamp;
 
     m_history = UndoHistory();           // loading a file is not an undo step
     m_lastKind = EditKind::None;

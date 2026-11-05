@@ -13,6 +13,9 @@ ChaoticNotepad/
 │       ├── dialog/                     // the question box's logic
 │       │   ├── dialog.h                // modal box with 2 or 3 buttons: which is selected and what each key does; drawing is up to the front end
 │       │   └── dialog.cpp              // picks a button by key, first letter or click
+│       ├── docx/                       // Word documents
+│       │   ├── docx.h                  // namespace Docx: reads and writes .docx as paragraphs with bold, italic and underline
+│       │   └── docx.cpp                // the zip (through zlib), the document.xml scanner and the smallest valid .docx
 │       ├── document/                   // one open file
 │       │   ├── document.h              // the open file: path, saved text, line endings, BOM, encoding; open, save, reload, detects changes on disk
 │       │   └── document.cpp            // loading, saving (a file always ends with a newline), indent detection, disk change checks
@@ -176,6 +179,9 @@ ChaoticNotepad/
 │   ├── settings/                       // settings for QML
 │   │   ├── settingscontroller.h        // theme, font, indent, bracket closing, minimap and hide-pointer switches, and the Qt version for About (SettingsController)
 │   │   └── settingscontroller.cpp      // reads and writes QSettings, applies the indent and bracket choices to every tab
+│   ├── session/                        // session restore
+│   │   ├── session.h                   // namespace Session: keeps every tab (unsaved text too) on quit and brings it back on start
+│   │   └── session.cpp                 // session.json and the unsaved texts in ~/.local/share/ChaoticNotepad/session, one owning window
 │   ├── shortcuts/                      // keyboard shortcuts for QML
 │   │   ├── shortcutscontroller.h       // the shortcut list and the keys you chose (ShortcutsController)
 │   │   └── shortcutscontroller.cpp     // builds the list, turns a changed key back into the engine's built-in key, saves in QSettings

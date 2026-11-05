@@ -1,4 +1,14 @@
 #include "document.h"
+#include "../docx/docx.h"
+
+namespace {
+bool sameLook(const std::vector<CharStyle>& a, const std::vector<CharStyle>& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i)
+        if (a[i].bold != b[i].bold || a[i].italic != b[i].italic || a[i].underline != b[i].underline) return false;
+    return true;
+}
+}
 
 IndentStyle Document::detectIndent(const std::string& text, bool* found) {
     IndentStyle style;
@@ -48,10 +58,34 @@ std::string Document::name() const {
 }
 
 bool Document::modified(const TextView& view) const {
-    return view.text() != m_savedText;
+    if (view.text() != m_savedText) return true;
+    return m_rich && !sameLook(view.allStyles(), m_savedStyles);
 }
 
-void Document::applyRaw(const std::string& raw, const std::string& path, TextView& view, bool& hadTabs) {
+bool Document::readDisk(const std::string& path, std::string& raw, std::string& error) {
+    return Docx::isDocxPath(path) ? FileIO::readBytes(path, raw, error) : FileIO::readFile(path, raw, error);
+}
+
+bool Document::applyRaw(const std::string& raw, const std::string& path, TextView& view, bool& hadTabs, std::string& error) {
+    m_rich = Docx::isDocxPath(path);
+    if (m_rich) {
+        Docx::Content c;
+        if (!Docx::read(raw, c, error)) { m_rich = Docx::isDocxPath(m_path); return false; }
+        m_crlf = false;
+        m_mixedRaw.clear();
+        m_bom = false;
+        m_encoding = "UTF-8";
+        m_lostOnOpen = c.lostSomething;
+        hadTabs = c.text.find('\t') != std::string::npos;
+        view.loadText(c.text, c.styles);
+        view.setIndent(detectIndent(c.text, &m_ownIndent));
+        view.setFoldLanguage(path);
+        m_savedText = view.text();
+        m_savedStyles = view.allStyles();
+        return true;
+    }
+    m_savedStyles.clear();
+    m_lostOnOpen = false;
     size_t crlf = 0, lf = 0, cr = 0;
     for (size_t i = 0; i < raw.size(); ++i) {
         if (raw[i] == '\r') ++cr;
@@ -66,6 +100,7 @@ void Document::applyRaw(const std::string& raw, const std::string& path, TextVie
     view.setIndent(detectIndent(text, &m_ownIndent));     // Tab inserts what this file already uses
     view.setFoldLanguage(path);
     m_savedText = view.text();
+    return true;
 }
 
 void Document::recordDisk(const std::string& raw) {
@@ -82,18 +117,24 @@ bool Document::open(const std::string& rawPath, TextView& view, std::string& mes
 
     std::string text, err;
     bool isNew = !FileIO::exists(path);
-    if (!isNew && !FileIO::readFile(path, text, err)) {
+    if (!isNew && !readDisk(path, text, err)) {
         message = "cannot open " + path + ": " + err;
         return false;
     }
 
     bool hadTabs = false;
-    applyRaw(text, path, view, hadTabs);
+    if (!applyRaw(text, path, view, hadTabs, err)) {
+        message = "cannot open " + path + ": " + err;
+        return false;
+    }
     m_path = path;
     if (isNew) { m_onDisk = false; m_deleted = false; m_hash = 0; m_mtimeNs = 0; m_size = -1; }
     else recordDisk(text);
 
     if (isNew) message = "new file " + FileIO::baseName(path) + " (created on first save)";
+    else if (m_rich) message = "opened " + FileIO::baseName(path) +
+                               (m_lostOnOpen ? " (only its text, bold, italic and underline are kept: saving drops its tables, pictures and other layout)"
+                                             : " (Word document: text, bold, italic and underline)");
     else message = "opened " + FileIO::baseName(path) + (hadTabs ? " (indented with tabs)" : "");
     return true;
 }
@@ -113,10 +154,13 @@ bool Document::save(TextView& view, std::string& message) {
         else view.moveCursor(keep.pos);
         text = view.text();
     }
-    const bool keepMixed = !m_mixedRaw.empty() && text == m_savedText;   // not edited: the line breaks stay as they are
-    const bool evenedOut = !m_mixedRaw.empty() && !keepMixed;
-    std::string out = m_bom ? "\xEF\xBB\xBF" : "";
-    if (keepMixed) {
+    const bool rich = Docx::isDocxPath(m_path);       // Save As decides by the new name
+    const bool keepMixed = !rich && !m_mixedRaw.empty() && text == m_savedText;   // not edited: the line breaks stay as they are
+    const bool evenedOut = !rich && !m_mixedRaw.empty() && !keepMixed;
+    std::string out = m_bom && !rich ? "\xEF\xBB\xBF" : "";
+    if (rich) {
+        out = Docx::write(text, view.allStyles());
+    } else if (keepMixed) {
         out = m_mixedRaw;
     } else if (m_crlf) {
         out.reserve(text.size() + text.size() / 20);
@@ -142,8 +186,18 @@ bool Document::save(TextView& view, std::string& message) {
     m_savedText = text;
     recordDisk(out);                                 // our own save must not look like an outside change
     m_encoding = FileIO::detectEncoding(text);       // typing an accent into an ASCII file makes it UTF-8
-    if (m_bom && m_encoding != "invalid UTF-8") m_encoding = "UTF-8 BOM";
+    if (m_bom && !rich && m_encoding != "invalid UTF-8") m_encoding = "UTF-8 BOM";
+    if (rich) {
+        m_crlf = false;
+        m_bom = false;
+        m_mixedRaw.clear();
+        m_savedStyles = view.allStyles();
+    } else {
+        m_savedStyles.clear();
+    }
+    m_rich = rich;
     message = "saved " + FileIO::baseName(m_path) + (newFolder ? " (new folder created)" : "");
+    if (rich) message += " (Word document: text, bold, italic and underline)";
     if (evenedOut) {
         m_mixedRaw.clear();
         message += " (mixed line endings are now all " + lineEndingName() + ")";
@@ -175,7 +229,7 @@ Document::DiskState Document::checkDisk() {
 
     // the time or size differs (or the file appeared / came back): look at the content
     std::string raw, err;
-    if (!FileIO::readFile(m_path, raw, err)) {        // unreadable or binary: nothing we could show
+    if (!readDisk(m_path, raw, err)) {                // unreadable or binary: nothing we could show
         m_onDisk = true; m_deleted = false; m_mtimeNs = mt; m_size = sz; m_hash = 0;
         return DiskState::Unchanged;
     }
@@ -188,7 +242,7 @@ Document::DiskState Document::checkDisk() {
 
 void Document::acknowledgeDisk() {
     std::string raw, err;
-    if (FileIO::readFile(m_path, raw, err)) { recordDisk(raw); return; }
+    if (readDisk(m_path, raw, err)) { recordDisk(raw); return; }
     long long mt = 0, sz = 0;
     if (FileIO::statFile(m_path, mt, sz)) {
         m_mtimeNs = mt; m_size = sz; m_onDisk = true; m_hash = 0; m_deleted = false;
@@ -197,14 +251,13 @@ void Document::acknowledgeDisk() {
 
 bool Document::reload(TextView& view, std::string& message) {
     std::string raw, err;
-    if (!FileIO::readFile(m_path, raw, err)) {
+    bool hadTabs = false;
+    const Position p = view.cursor();
+    if (!readDisk(m_path, raw, err) || !applyRaw(raw, m_path, view, hadTabs, err)) {
         message = "cannot reload " + name() + ": " + err;
         acknowledgeDisk();                            // do not ask again about this version
         return false;
     }
-    Position p = view.cursor();
-    bool hadTabs = false;
-    applyRaw(raw, m_path, view, hadTabs);
     recordDisk(raw);
     view.moveCursor(p);
     message = "reloaded " + name() + " from disk";
@@ -217,6 +270,9 @@ void Document::loadUntitled(const std::string& text, TextView& view) {
     m_mixedRaw.clear();
     m_ownIndent = false;
     m_bom = false;
+    m_rich = false;
+    m_savedStyles.clear();
+    m_lostOnOpen = false;
     view.loadText(text);
     m_savedText = view.text();
     m_encoding = FileIO::detectEncoding(m_savedText);

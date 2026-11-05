@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 #include "../fileIO/fileio.h"
 #include "../textview/textview.h"
 
@@ -24,7 +25,8 @@ public:
     bool hasPath() const { return !m_path.empty(); }
     const std::string& path() const { return m_path; }
     std::string name() const;                         // file name, or "[untitled]"
-    bool modified(const TextView& view) const;        // true if the text differs from the last save
+    bool modified(const TextView& view) const;        // true if the text differs from the last save (a .docx: or its formatting)
+    bool isRich() const { return m_rich; }            // a Word document: bold, italic and underline are saved too
     std::string lineEndingName() const { return m_crlf ? "CRLF" : "LF"; }   // what a save writes
     const std::string& encodingName() const { return m_encoding; }          // see FileIO::detectEncoding
 
@@ -45,11 +47,16 @@ public:
     void loadUntitled(const std::string& text, TextView& view);
 
 private:
-    void applyRaw(const std::string& raw, const std::string& path, TextView& view, bool& hadTabs);
+    // Puts the file's bytes into the view. false (view untouched): a .docx that cannot be read, see `error`.
+    bool applyRaw(const std::string& raw, const std::string& path, TextView& view, bool& hadTabs, std::string& error);
+    static bool readDisk(const std::string& path, std::string& raw, std::string& error);   // readFile, or readBytes for a .docx
     void recordDisk(const std::string& raw);          // remember size, time and hash of what is on disk now
 
     std::string m_path;
     std::string m_savedText;
+    bool m_rich = false;                              // see isRich()
+    std::vector<CharStyle> m_savedStyles;             // a .docx: the formatting as last saved
+    bool m_lostOnOpen = false;                        // the .docx had tables, pictures ... that a save drops
     bool m_crlf = false;                              // most line breaks of the file are Windows ones: a save writes those
     std::string m_mixedRaw;                           // the file as read, when its line breaks are mixed: an unedited save writes it back
     bool m_ownIndent = false;                         // see hasOwnIndent()
