@@ -70,7 +70,7 @@ If you used the AppImage, nothing was installed: just delete the file.
 
 Settings and changed shortcuts are saved in `~/.config/ChaoticNotepad/ChaoticNotepad.conf`.
 
-With **Restore tabs on start** switched on (Settings > Editor), the open tabs are kept in `~/.local/share/ChaoticNotepad/session`, unsaved text included, in a folder only you can read. Switching the setting off deletes it.
+With **Restore tabs on start** switched on (Settings > Editor), the open tabs are kept in `~/.local/state/ChaoticNotepad/session`, unsaved text included, in a folder only you can read. Switching the setting off deletes it.
 
 ## Updates
 

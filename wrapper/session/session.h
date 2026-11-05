@@ -2,7 +2,7 @@
 #include <QString>
 
 // Session restore (the "Restore tabs on start" setting). When it is on, quitting asks nothing: every tab is written to
-// ~/.local/share/ChaoticNotepad/session (unsaved text and untitled tabs included, the folder readable only by you)
+// ~/.local/state/ChaoticNotepad/session (unsaved text and untitled tabs included, the folder readable only by you)
 // and the next start opens them again, with the same tab in front and the cursors where they were.
 // Files with no unsaved changes are read again from disk; only unsaved text is kept in the session folder.
 //

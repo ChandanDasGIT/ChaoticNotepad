@@ -17,8 +17,20 @@ namespace {
 
 bool g_saved = false;
 
+// ~/.local/state/ChaoticNotepad: not ~/.local/share/ChaoticNotepad, which is the program itself in a tarball install
+// (installing or updating replaces that folder as a whole)
 QString root() {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/ChaoticNotepad");
+    return QStandardPaths::writableLocation(QStandardPaths::GenericStateLocation) + QStringLiteral("/ChaoticNotepad");
+}
+
+// 2.3.4 kept the session in the program's folder: move it once
+void moveOldSession() {
+    const QString old = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/ChaoticNotepad/session");
+    const QString now = root() + QStringLiteral("/session");
+    if (!QFileInfo::exists(old + QStringLiteral("/session.json")) || QFileInfo::exists(now)) return;
+    QDir().mkpath(root());
+    if (!QDir().rename(old, now)) return;
+    QFile::remove(QFileInfo(old).path() + QStringLiteral("/session.lock"));
 }
 
 // The window that owns the session. A crashed window's lock is noticed as stale (its process is gone).
@@ -149,6 +161,7 @@ bool saveForQuit() {
 
 void restore() {
     if (!enabled() || !owns()) return;
+    moveOldSession();
     QFile f(folder() + QStringLiteral("/session.json"));
     if (!f.open(QIODevice::ReadOnly)) return;
     const QJsonObject top = QJsonDocument::fromJson(f.readAll()).object();

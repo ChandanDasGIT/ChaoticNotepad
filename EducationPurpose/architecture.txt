@@ -181,7 +181,7 @@ ChaoticNotepad/
 │   │   └── settingscontroller.cpp      // reads and writes QSettings, applies the indent and bracket choices to every tab
 │   ├── session/                        // session restore
 │   │   ├── session.h                   // namespace Session: keeps every tab (unsaved text too) on quit and brings it back on start
-│   │   └── session.cpp                 // session.json and the unsaved texts in ~/.local/share/ChaoticNotepad/session, one owning window
+│   │   └── session.cpp                 // session.json and the unsaved texts in ~/.local/state/ChaoticNotepad/session, one owning window
 │   ├── shortcuts/                      // keyboard shortcuts for QML
 │   │   ├── shortcutscontroller.h       // the shortcut list and the keys you chose (ShortcutsController)
 │   │   └── shortcutscontroller.cpp     // builds the list, turns a changed key back into the engine's built-in key, saves in QSettings
