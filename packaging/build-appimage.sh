@@ -5,7 +5,7 @@
 #   SHA256SUMS.txt
 #
 # Usage:  ./packaging/build-appimage.sh 2.0
-# Needs:  Qt 6 (qmake6 or qmake on PATH, or QMAKE=/path/to/qmake6), cmake, curl, a C++17 compiler.
+# Needs:  Qt 6 (qmake6 or qmake on PATH, or QMAKE=/path/to/qmake6), cmake, curl, a C++17 compiler, rsvg-convert (librsvg2-bin) or ImageMagick for the icon.
 set -euo pipefail
 
 VERSION="${1:?usage: $0 <version>   for example: $0 2.0}"
@@ -165,8 +165,17 @@ EOF
 chmod +x "$APPDIR/AppRun"
 
 # ------------------------------------------------------------------ the AppImage
-# appimagetool stopped making .DirIcon from an SVG (build 333): without it, it refuses to pack.
-ln -sf "$NAME.svg" "$APPDIR/.DirIcon"
+# .DirIcon is the AppImage's own icon. appimagetool no longer makes it, and takes only a PNG (an SVG gets
+# "not valid", and later versions refuse to pack): render one from the SVG. rsvg-convert is librsvg2-bin.
+rm -f "$APPDIR/.DirIcon"
+if command -v rsvg-convert > /dev/null 2>&1; then
+  rsvg-convert -w 256 -h 256 -o "$APPDIR/.DirIcon" "$APPDIR/$NAME.svg"
+elif command -v magick > /dev/null 2>&1; then
+  magick -background none -density 384 "$APPDIR/$NAME.svg" -resize 256x256 "png:$APPDIR/.DirIcon"
+else
+  echo "Needs rsvg-convert (librsvg2-bin) or ImageMagick to make the AppImage icon." >&2
+  exit 1
+fi
 appimagetool-x86_64.AppImage --no-appstream "$APPDIR" "$DIST/$NAME-$VERSION-$ARCH.AppImage"
 
 # ------------------------------------------------------------------ the tarball
