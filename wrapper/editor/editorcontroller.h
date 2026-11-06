@@ -77,7 +77,8 @@ public:
     Q_INVOKABLE void openUrls(const QList<QUrl>& urls);
 
 signals:
-    void rowsRebuilt();                 // the rows were worked out again (the gutter refreshes itself on this)
+    void rowsBuilt();                   // the builder holds the new rows; the editor's list model is not told yet (the gutter refreshes itself on this)
+    void rowsRebuilt();                 // the rows were worked out again and the editor's list model has them
     void stickyChanged();
     void statusChanged();
     void scrollRequested(int topRow);   // the text area should scroll so this row is the first on screen

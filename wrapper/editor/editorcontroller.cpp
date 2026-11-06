@@ -85,6 +85,7 @@ void EditorController::rebuild(bool force) {
     const size_t rowsAfter = m_builder.rowCount();
     const size_t rowsDiff = rowsAfter > rowsBefore ? rowsAfter - rowsBefore : rowsBefore - rowsAfter;
     const bool bigChange = m_built && tab.id == m_lastTabId && rowsDiff > 1;   // the row lists start again (see EditorRowsModel::refresh)
+    emit rowsBuilt();                  // the gutter first: resetting the editor's list scrolls the gutter, which then reads rows straight away
     m_rows.refresh(&m_builder, &tab);
 
     m_lastTabId = tab.id;

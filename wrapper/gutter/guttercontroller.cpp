@@ -4,7 +4,7 @@
 
 GutterController::GutterController(QObject* parent) : QObject(parent), m_rows(this) {
     EditorController* editor = EditorController::instance();
-    connect(editor, &EditorController::rowsRebuilt, this, &GutterController::refresh);
+    connect(editor, &EditorController::rowsBuilt, this, &GutterController::refresh);
     connect(editor, &EditorController::stickyChanged, this, &GutterController::refreshSticky);
     refresh();
     refreshSticky();
