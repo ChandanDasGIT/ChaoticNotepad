@@ -24,6 +24,8 @@ import QtQuick.Layouts
 //   setVisibleRows(n)        how many rows fit (the wrapper needs it for Page Up / Page Down)
 //   keyPressed(key, text, modifiers)   typing, Enter, Esc, arrows, Backspace, Alt+Up ...
 //   click(row), activate(), cancel(), goUp(), toggleHidden()
+//   pathEditing, pathText    the folder path is being edited (right-click > Paste), and its text
+//   pastePath(go)            right-click the folder path: Paste (false) or Paste and go (true)
 Item {
     id: root
 
@@ -36,12 +38,18 @@ Item {
     focus: BrowserController.open
 
     onVisibleChanged: {
+        pathMenu.visible = false
         if (visible) forceActiveFocus()
         else root.closed()
     }
 
     // every key belongs to the box while it is open
     Keys.onPressed: (event) => {
+        if (pathMenu.visible) {                  // the right-click menu is open: Esc closes it, other keys wait
+            if (event.key === Qt.Key_Escape) pathMenu.visible = false
+            event.accepted = true
+            return
+        }
         BrowserController.keyPressed(event.key, event.text, event.modifiers)
         event.accepted = true
     }
@@ -116,6 +124,33 @@ Item {
         }
     }
 
+    component MenuRow: Item {                // a row of the right-click menu of the folder path
+        id: m
+        property string label: ""
+        signal clicked()
+        width: parent ? parent.width : 0
+        height: 28
+        Rectangle {
+            anchors.fill: parent
+            radius: 4
+            color: rowMouse.containsMouse ? Theme.hoverBg : "transparent"
+        }
+        Text {
+            x: 10
+            anchors.verticalCenter: parent.verticalCenter
+            text: m.label
+            color: Theme.text
+            font.pixelSize: Theme.uiFontSize + 1
+        }
+        MouseArea {
+            id: rowMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: m.clicked()
+        }
+    }
+
     // ---- the box ----
     Rectangle {
         id: panel
@@ -153,23 +188,41 @@ Item {
                     icon: Icon.chevronUp
                     onClicked: BrowserController.goUp()
                 }
-                Rectangle {
+                Rectangle {                              // the folder path; right-click: Paste, Paste and go
+                    id: pathBar
                     Layout.fillWidth: true
                     Layout.preferredHeight: 28
                     radius: 4
                     color: Theme.findFieldBg
                     border.width: 1
-                    border.color: Theme.findFieldBorder
+                    border.color: BrowserController.pathEditing ? Theme.accent : Theme.findFieldBorder
 
                     Text {
-                        anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
-                        verticalAlignment: Text.AlignVCenter
+                        id: pathLabel
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: 8
+                        width: parent.width - 16
                         elide: Text.ElideLeft            // a long path loses its beginning, not the folder you are in
-                        text: BrowserController.shownDirectory
+                        text: BrowserController.pathEditing ? BrowserController.pathText : BrowserController.shownDirectory
                         color: Theme.text
+                        font.family: BrowserController.pathEditing ? Theme.editorFontFamily : Qt.application.font.family
                         font.pixelSize: Theme.uiFontSize + 1
+                    }
+                    Rectangle {                          // the text cursor while the path is edited
+                        x: 8 + Math.min(pathLabel.contentWidth, pathLabel.width)
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 1
+                        height: 16
+                        color: Theme.text
+                        visible: BrowserController.pathEditing
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.RightButton
+                        onPressed: (mouse) => {
+                            const p = pathBar.mapToItem(root, mouse.x, mouse.y)
+                            pathMenu.show(p.x, p.y)
+                        }
                     }
                 }
                 IconButton {
@@ -196,7 +249,8 @@ Item {
                     radius: 4
                     color: Theme.findFieldBg
                     border.width: 1
-                    border.color: !BrowserController.listHasFocus || BrowserController.fieldLabel === "Filter"
+                    border.color: !BrowserController.pathEditing
+                                  && (!BrowserController.listHasFocus || BrowserController.fieldLabel === "Filter")
                                   ? Theme.accent : Theme.findFieldBorder
 
                     Text {
@@ -216,7 +270,7 @@ Item {
                         width: 1
                         height: 16
                         color: Theme.text
-                        visible: root.visible
+                        visible: root.visible && !BrowserController.pathEditing
                     }
                 }
             }
@@ -324,6 +378,53 @@ Item {
                     label: BrowserController.actionLabel
                     primary: true
                     onClicked: BrowserController.activate()
+                }
+            }
+        }
+    }
+
+    // ---- the right-click menu of the folder path ----
+    Item {
+        id: pathMenu
+        anchors.fill: parent
+        visible: false
+
+        function show(x, y) {
+            box.x = Math.max(4, Math.min(x, root.width - box.width - 4))
+            box.y = Math.max(4, Math.min(y, root.height - box.height - 4))
+            visible = true
+        }
+
+        MouseArea {                                  // a click anywhere else closes it
+            anchors.fill: parent
+            acceptedButtons: Qt.AllButtons
+            onPressed: pathMenu.visible = false
+            onWheel: (wheel) => wheel.accepted = true
+        }
+
+        Rectangle {
+            id: box
+            width: 170
+            height: rows.implicitHeight + 8
+            radius: 6
+            color: Theme.dialogBg
+            border.width: 1
+            border.color: Theme.findFieldBorder
+
+            MouseArea { anchors.fill: parent }       // clicks between the rows keep the menu open
+
+            Column {
+                id: rows
+                x: 4
+                y: 4
+                width: parent.width - 8
+                MenuRow {
+                    label: "Paste"
+                    onClicked: { pathMenu.visible = false; BrowserController.pastePath(false) }
+                }
+                MenuRow {
+                    label: "Paste and go"
+                    onClicked: { pathMenu.visible = false; BrowserController.pastePath(true) }
                 }
             }
         }

@@ -34,6 +34,20 @@ public:
     Result activate();                     // Enter
     size_t pageRows() const;               // rows to jump for Page Up / Page Down
 
+    // ---- the folder path at the top, edited: right-click it > Paste ----
+    // While it is edited, typing, Backspace and pasting change the path instead of the field, Enter goes there
+    // (an error leaves it open to fix) and Esc puts the folder back. Moving in the list or the folders ends it too.
+    void editPath(const std::string& text);    // the path bar becomes an edit box holding `text` (cleaned, see goTo)
+    void cancelPathEdit() { m_editingPath = false; m_error.clear(); }
+    bool editingPath() const { return m_editingPath; }
+    const std::string& pathText() const { return m_pathText; }
+
+    // Right-click > Paste and go, or Enter in the edited path. Takes the first line, without spaces around it;
+    // a file:// link becomes its path; ~ and relative paths work as in the field.
+    // A folder: it is shown. A file (existing or new): Open picks it, Save as shows its folder and fills in the name.
+    // Its folder does not exist: m_error says so and nothing moves.
+    Result goTo(const std::string& path);
+
     // ---- mouse ----
     Result click(size_t row);              // a click on list row `row` (0-based, counted from the first entry, not the screen top);
                                            // a click selects, a second click on it within 400 ms = Enter
@@ -69,6 +83,7 @@ private:
     void enterEntry(const Entry& e, bool clearName);
     bool navigateFromName();
     std::string resolveName(const std::string& name) const;
+    static std::string cleanPath(const std::string& text);   // see goTo
 
     Mode m_mode = Mode::Open;
     std::string m_dir;                 // the folder being shown (absolute)
@@ -81,6 +96,8 @@ private:
     bool m_showHidden = false;
     bool m_listFocus = false;          // Save as: true after Up/Down, so Enter acts on the selected row
     int m_visible = 15;                // list rows the front end can show
+    bool m_editingPath = false;        // see editPath()
+    std::string m_pathText;
     long long m_lastClickMs = 0;
     size_t m_lastClickIdx = 0;
 };

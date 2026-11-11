@@ -134,6 +134,7 @@ Files and tabs
 - Open files from the command line: `ChaoticNotepad file1.txt file2.txt` or `cnote file1.txt`. A name that does not exist yet opens as a new tab with that name; the first save creates the file there.
 - Drop files on the window to open them.
 - Built-in file browser for Open and Save as, with a type-to-filter list, typed paths including ~, and a hidden files toggle.
+- Right-click the folder path in the Open / Save as box: Paste puts a copied path there to edit (Enter goes, Esc goes back), Paste and go jumps straight to it. A copied folder is shown, a copied file opens (Open) or fills in the name (Save as).
 - Safe saving through a temporary file, so a crash cannot leave a half-written file. A saved file always ends with a newline.
 - Line endings (LF or CRLF) and UTF-8 BOM are kept as they were. A file with mixed line endings is saved unchanged until you edit it, then it uses its most common ending and tells you.
 - Binary files, and files over 50 MB, are refused with a message instead of being damaged.

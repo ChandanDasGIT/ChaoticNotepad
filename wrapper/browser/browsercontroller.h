@@ -24,6 +24,8 @@ class BrowserController : public QObject {
     Q_PROPERTY(QString emptyMessage READ emptyMessage NOTIFY changed)
     Q_PROPERTY(QString error READ error NOTIFY changed)
     Q_PROPERTY(QString hint READ hint NOTIFY changed)
+    Q_PROPERTY(bool pathEditing READ pathEditing NOTIFY changed)
+    Q_PROPERTY(QString pathText READ pathText NOTIFY changed)
 
 public:
     explicit BrowserController(QObject* parent = nullptr);
@@ -41,6 +43,8 @@ public:
     QString emptyMessage() const { return m_empty; }
     QString error() const { return m_error; }
     QString hint() const { return m_hint; }
+    bool pathEditing() const { return m_pathEditing; }
+    QString pathText() const { return m_pathText; }
 
     Q_INVOKABLE void openFile();            // the Open button (Ctrl+O does the same)
     Q_INVOKABLE void saveFileAs();          // the Save As button (Alt+S does the same)
@@ -51,6 +55,7 @@ public:
     Q_INVOKABLE void cancel();              // same as Esc
     Q_INVOKABLE void goUp();
     Q_INVOKABLE void toggleHidden();
+    Q_INVOKABLE void pastePath(bool go);    // right-click the folder path: Paste (edit it) or Paste and go
 
 signals:
     void changed();
@@ -59,7 +64,8 @@ private:
     void sync();
 
     bool m_open = false;
-    QString m_title, m_actionLabel, m_directory, m_fieldLabel, m_name, m_empty, m_error, m_hint;
+    QString m_title, m_actionLabel, m_directory, m_fieldLabel, m_name, m_empty, m_error, m_hint, m_pathText;
+    bool m_pathEditing = false;
     QVariantList m_entries;
     int m_selected = 0;
     bool m_listFocus = false;

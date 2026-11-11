@@ -292,7 +292,9 @@ void tabKey(bool shift, TextView& view, InputState& st) {
 
 void escapeKey(TextView& view, InputState& st) {
     if (st.editorFocus) { closeFind(view, st); return; }         // the text has the keyboard, the find bar is still open
-    if (st.mode == InputMode::Prompt) {
+    if (st.mode == InputMode::Prompt && st.browser.editingPath()) {   // Esc in the edited path: only the path goes back
+        st.browser.cancelPathEdit();
+    } else if (st.mode == InputMode::Prompt) {
         st.mode = InputMode::Edit;
         st.status = "cancelled";
     } else if (st.mode != InputMode::Edit) {

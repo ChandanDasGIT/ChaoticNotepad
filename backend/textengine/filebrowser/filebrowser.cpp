@@ -87,6 +87,8 @@ void FileBrowser::selectByName(const std::string& name) {
 void FileBrowser::open(Mode mode, const std::string& currentFile) {
     m_mode = mode;
     m_name.clear();
+    m_editingPath = false;
+    m_pathText.clear();
     m_error.clear();
     m_listFocus = false;
     m_lastClickMs = 0;
@@ -137,6 +139,11 @@ bool FileBrowser::navigateFromName() {
 
 void FileBrowser::typeText(const std::string& s) {
     m_error.clear();
+    if (m_editingPath) {
+        for (char c : s)
+            if (static_cast<unsigned char>(c) >= 32 && c != 127) m_pathText += c;
+        return;
+    }
     for (char c : s) {
         if (static_cast<unsigned char>(c) < 32 || c == 127) continue;
         m_name += c;
@@ -149,6 +156,14 @@ void FileBrowser::typeText(const std::string& s) {
 
 void FileBrowser::backspace(bool wholeName) {
     m_error.clear();
+    if (m_editingPath) {                                 // an empty path stays empty: no going up from here
+        if (wholeName) m_pathText.clear();
+        else {
+            while (!m_pathText.empty() && (static_cast<unsigned char>(m_pathText.back()) & 0xC0) == 0x80) m_pathText.pop_back();
+            if (!m_pathText.empty()) m_pathText.pop_back();
+        }
+        return;
+    }
     if (m_name.empty()) { goUp(); return; }
     if (wholeName) m_name.clear();
     else {
@@ -162,6 +177,7 @@ void FileBrowser::backspace(bool wholeName) {
 
 void FileBrowser::moveSelection(int delta) {
     m_error.clear();
+    m_editingPath = false;
     if (m_view.empty()) return;
     long s = static_cast<long>(m_sel) + delta;
     s = std::max(0L, std::min(s, static_cast<long>(m_view.size()) - 1));
@@ -175,6 +191,7 @@ void FileBrowser::selectLast() { moveSelection(static_cast<int>(m_view.size()));
 
 void FileBrowser::goUp() {
     m_error.clear();
+    m_editingPath = false;
     if (FileIO::isRoot(m_dir)) return;
     std::string child = lastPart(m_dir);
     if (!loadDir(parentOf(m_dir))) return;
@@ -204,6 +221,7 @@ void FileBrowser::enterEntry(const Entry& e, bool clearName) {
 
 FileBrowser::Result FileBrowser::activate() {
     m_error.clear();
+    if (m_editingPath) return goTo(m_pathText);
     Result r;
     Entry sel{"", false};
     bool haveSel = !m_view.empty() && m_sel < m_view.size();
@@ -243,6 +261,81 @@ FileBrowser::Result FileBrowser::activate() {
     return r;
 }
 
+// ---------------------------------------------------------------- a pasted path
+
+std::string FileBrowser::cleanPath(const std::string& text) {
+    std::string line;
+    size_t pos = 0;
+    while (pos <= text.size() && line.empty()) {         // the first line that is not blank
+        size_t end = text.find_first_of("\r\n", pos);
+        if (end == std::string::npos) end = text.size();
+        line = text.substr(pos, end - pos);
+        size_t a = line.find_first_not_of(" \t");
+        size_t b = line.find_last_not_of(" \t");
+        line = a == std::string::npos ? std::string() : line.substr(a, b - a + 1);
+        pos = end + 1;
+    }
+    for (const char* prefix : {"file://localhost/", "file:///"}) {   // a link copied from a file manager
+        std::string p = prefix;
+        if (line.compare(0, p.size(), p) == 0) {
+            std::string decoded = "/";
+            std::string rest = line.substr(p.size());
+            for (size_t i = 0; i < rest.size(); ++i) {   // %20 and the like
+                if (rest[i] == '%' && i + 2 < rest.size() && std::isxdigit(static_cast<unsigned char>(rest[i + 1]))
+                    && std::isxdigit(static_cast<unsigned char>(rest[i + 2]))) {
+                    decoded += static_cast<char>(std::stoi(rest.substr(i + 1, 2), nullptr, 16));
+                    i += 2;
+                } else decoded += rest[i];
+            }
+            return decoded;
+        }
+    }
+    return line;
+}
+
+void FileBrowser::editPath(const std::string& text) {
+    m_error.clear();
+    m_pathText = cleanPath(text);
+    if (m_pathText.empty()) { m_error = "the clipboard has no path"; m_editingPath = false; return; }
+    m_editingPath = true;
+}
+
+FileBrowser::Result FileBrowser::goTo(const std::string& text) {
+    Result r;
+    m_error.clear();
+    std::string p = cleanPath(text);
+    if (p.empty()) { m_error = "no path to go to"; return r; }
+    std::string full = resolveName(p);
+    while (full.size() > 1 && full.back() == '/') full.pop_back();
+
+    if (isDirectory(full)) {
+        if (!loadDir(full)) return r;                    // loadDir says why
+        m_editingPath = false;
+        if (m_mode == Mode::Open) m_name.clear();        // Save as keeps the name: it goes into this folder now
+        m_listFocus = false;
+        rebuildView();
+        return r;
+    }
+    std::string folder = FileIO::parentDir(full);
+    std::string base = FileIO::baseName(full);
+    if (folder.empty() || !isDirectory(folder)) { m_error = "no such folder: " + (folder.empty() ? p : folder); return r; }
+    if (!loadDir(folder)) return r;
+    m_editingPath = false;
+    m_listFocus = false;
+    if (m_mode == Mode::Open) {
+        m_name.clear();
+        rebuildView();
+        selectByName(base);
+        r.kind = Result::Choose;                         // a file that is not there yet opens as a new one, as Enter does
+        r.path = join(m_dir, base);
+        return r;
+    }
+    m_name = base;                                       // Save as: only fill in the name, the Save button decides
+    rebuildView();
+    selectByName(base);
+    return r;
+}
+
 size_t FileBrowser::pageRows() const {
     int n = m_visible - 1;
     return n > 1 ? static_cast<size_t>(n) : 1;
@@ -260,6 +353,7 @@ FileBrowser::Result FileBrowser::click(size_t idx) {
     m_lastClickMs = dbl ? 0 : now;
     m_lastClickIdx = idx;
     m_error.clear();
+    m_editingPath = false;
 
     m_sel = idx;
     m_listFocus = true;
@@ -309,6 +403,7 @@ std::string FileBrowser::emptyMessage() const {
 }
 
 std::string FileBrowser::hint() const {
+    if (m_editingPath) return "Enter go there | Esc back to the folder";
     return m_mode == Mode::Open
         ? "Enter open | Backspace up | Alt+H hidden | Esc cancel"
         : "Enter save | Up/Down pick | Backspace up | Alt+H hidden | Esc cancel";

@@ -1,4 +1,6 @@
 #include "wrapper/browser/browsercontroller.h"
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QVariantMap>
 #include "wrapper/editor/editorcontroller.h"
 
@@ -31,6 +33,8 @@ void BrowserController::sync() {
     set(m_empty, fb.emptyMessage());
     set(m_error, fb.error());
     set(m_hint, fb.hint());
+    set(m_pathText, fb.pathText());
+    if (fb.editingPath() != m_pathEditing) { m_pathEditing = fb.editingPath(); dirty = true; }
 
     const int selected = static_cast<int>(fb.selectedRow());
     if (selected != m_selected) { m_selected = selected; dirty = true; }
@@ -82,6 +86,14 @@ void BrowserController::goUp() {
     EditorController* ed = EditorController::instance();
     ed->inputState().browser.goUp();
     ed->changedOutside(false);
+}
+
+void BrowserController::pastePath(bool go) {
+    EditorController* ed = EditorController::instance();
+    FileBrowser& fb = ed->inputState().browser;
+    fb.editPath(QGuiApplication::clipboard()->text().toStdString());
+    if (go && fb.editingPath()) ed->keyPressed(Qt::Key_Return, QString(), 0);   // the same way as Enter: opens or saves as usual
+    else ed->changedOutside(false);
 }
 
 void BrowserController::toggleHidden() {
