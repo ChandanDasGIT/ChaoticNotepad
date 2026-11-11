@@ -95,8 +95,11 @@ size_t TabManager::openFiles(const std::vector<std::string>& paths, std::string&
     std::string lastOk, failures;
     for (const std::string& path : paths) {
         std::string one;
-        if (!FileIO::exists(path)) {
-            one = "no such file";
+        // a file that does not exist yet opens as a new tab with that name: the first save creates it.
+        // Its folder has to exist, or that save could never work.
+        std::string folder = FileIO::parentDir(FileIO::absolutePath(path));
+        if (!FileIO::exists(path) && !folder.empty() && !FileIO::isDirectory(folder)) {
+            one = "no such folder";
             if (!failures.empty()) failures += "; ";
             failures += FileIO::baseName(path) + ": " + one;
         } else if (openFile(path, one)) {

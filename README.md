@@ -13,7 +13,7 @@ A modern, minimalist text and code editor for Linux, built with C++ and Qt6 QML.
 ./install-app.sh
 ```
 
-This installs for your user only, so it does not need sudo. It adds the app to your menu and adds the `ChaoticNotepad` command to `~/.local/bin` (that folder must be on your PATH for the command to work).
+This installs for your user only, so it does not need sudo. It adds the app to your menu and adds the `ChaoticNotepad` command (and `cnote` for short) to `~/.local/bin` (that folder must be on your PATH for the command to work).
 
 ### Use AppImage (Recommended)
 
@@ -131,7 +131,7 @@ Word documents
 Files and tabs
 - Restore tabs on start (Settings > Editor): closing asks nothing and the next start brings back every tab, unsaved changes and untitled tabs too, with the same tab in front and the cursors where they were.
 - Tabs with an unsaved marker, drag-and-drop reordering, reopen of the last closed tab, and keyboard switching.
-- Open existing files from the command line: `ChaoticNotepad file1.txt file2.txt`
+- Open files from the command line: `ChaoticNotepad file1.txt file2.txt` or `cnote file1.txt`. A name that does not exist yet opens as a new tab with that name; the first save creates the file there.
 - Drop files on the window to open them.
 - Built-in file browser for Open and Save as, with a type-to-filter list, typed paths including ~, and a hidden files toggle.
 - Safe saving through a temporary file, so a crash cannot leave a half-written file. A saved file always ends with a newline.

@@ -21,8 +21,9 @@ mkdir -p "$BIN_DIR" "$MENU_DIR" "$ICON_DIR"
 rm -rf "$APP_DIR"
 cp -a "$HERE/app" "$APP_DIR"
 
-# the "ChaoticNotepad" command
+# the "ChaoticNotepad" command, and "cnote" for short
 ln -sf "$APP_DIR/AppRun" "$BIN_DIR/ChaoticNotepad"
+ln -sf "$APP_DIR/AppRun" "$BIN_DIR/cnote"
 
 # the icon
 cp "$APP_DIR/usr/share/icons/hicolor/scalable/apps/ChaoticNotepad.svg" "$ICON_DIR/ChaoticNotepad.svg"
@@ -56,9 +57,9 @@ fi
 
 echo "ChaoticNotepad is installed."
 echo "  Program : $APP_DIR"
-echo "  Command : $BIN_DIR/ChaoticNotepad"
+echo "  Command : $BIN_DIR/ChaoticNotepad (or $BIN_DIR/cnote)"
 echo "  Menu    : $MENU_DIR/ChaoticNotepad.desktop"
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
-  *) echo "Note: $BIN_DIR is not on your PATH, so the 'ChaoticNotepad' command will not work until you add it." ;;
+  *) echo "Note: $BIN_DIR is not on your PATH, so the 'ChaoticNotepad' and 'cnote' commands will not work until you add it." ;;
 esac

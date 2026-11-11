@@ -98,11 +98,13 @@ install(TARGETS appChaoticNotepad
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-# `ChaoticNotepad` in a terminal (and in ChaoticNotepad.desktop) starts the app: a link next to the real program.
+# `ChaoticNotepad` or `cnote` in a terminal (and in ChaoticNotepad.desktop) starts the app: links next to the real program.
 install(CODE "
-    set(link \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/ChaoticNotepad\")
-    file(REMOVE \"\${link}\")
-    file(CREATE_LINK appChaoticNotepad \"\${link}\" SYMBOLIC)
+    foreach(name ChaoticNotepad cnote)
+        set(link \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/\${name}\")
+        file(REMOVE \"\${link}\")
+        file(CREATE_LINK appChaoticNotepad \"\${link}\" SYMBOLIC)
+    endforeach()
 ")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ChaoticNotepad.desktop")

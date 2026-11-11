@@ -35,6 +35,7 @@ if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
   if [ -n "$USER_HOME" ] && [ -x "$USER_DATA/ChaoticNotepad/AppRun" ]; then
     rm -rf "$USER_DATA/ChaoticNotepad"
     if [ -L "$USER_HOME/.local/bin/ChaoticNotepad" ]; then rm -f "$USER_HOME/.local/bin/ChaoticNotepad"; fi
+    if [ -L "$USER_HOME/.local/bin/cnote" ]; then rm -f "$USER_HOME/.local/bin/cnote"; fi
     rm -f "$USER_DATA/applications/ChaoticNotepad.desktop"
     rm -f "$USER_DATA/icons/hicolor/scalable/apps/ChaoticNotepad.svg"
     if command -v update-desktop-database &> /dev/null; then

@@ -12,6 +12,7 @@ echo "Uninstalling ChaoticNotepad..."
 rm -f /usr/local/bin/ChaoticNotepad
 rm -f /usr/local/bin/appNotepadQtQuick
 rm -f /usr/local/bin/appChaoticNotepad
+rm -f /usr/local/bin/cnote
 
 # Remove desktop entry and icons
 rm -f /usr/local/share/applications/ChaoticNotepad.desktop

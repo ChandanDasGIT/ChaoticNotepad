@@ -177,6 +177,17 @@ void UpdateController::readEnvironment() {
     for (const char* name : {kStartedVariable, "APPIMAGE", "APPDIR", "ARGV0", "OWD"}) qunsetenv(name);
 }
 
+// The short "cnote" command came after install-app.sh first shipped, and an update in the app only swaps the
+// program folder, so an older install gets the link here. Only where install-app.sh made the "ChaoticNotepad"
+// link, and never over an existing "cnote" (a link that points nowhere counts as existing too).
+static void addShortCommand(const QString& program) {
+    const QString bin = QDir::homePath() + QStringLiteral("/.local/bin");
+    const QFileInfo full(bin + QStringLiteral("/ChaoticNotepad"));
+    const QFileInfo shortName(bin + QStringLiteral("/cnote"));
+    if (!full.isSymLink() || shortName.exists() || shortName.isSymLink()) return;
+    QFile::link(program, shortName.filePath());
+}
+
 UpdateController::UpdateController(QObject* parent) : QObject(parent) {
     QSettings& s = file();
     m_autoCheck = s.value("checkForUpdates", true).toBool();
@@ -201,6 +212,7 @@ UpdateController::UpdateController(QObject* parent) : QObject(parent) {
         m_kind = Kind::Tarball;
         m_installed = installed;
         m_program = installed + QStringLiteral("/AppRun");
+        addShortCommand(m_program);
     }
 
     if (m_kind != Kind::Manual) {
